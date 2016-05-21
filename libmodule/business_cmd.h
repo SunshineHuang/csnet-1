@@ -1,0 +1,17 @@
+#ifndef business_cmd_h
+#define business_cmd_h
+
+/*
+ * Business name: Echo Msg
+ *
+ * Request protocol:
+ *  string msg
+ *
+ * Reponse protocol:
+ *  string msg
+ */
+#define csnet_echo_msg_req 0x1001
+#define csnet_echo_msg_rsp 0x1002
+
+#endif  /* business_cmd_h */
+
