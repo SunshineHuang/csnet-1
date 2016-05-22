@@ -57,6 +57,24 @@ There are two type of server models in CSNet: Middle Server Model and Edge Serve
 ## Timer
 - timing wheel timer
 
+## Benchmark
+### Edge server
+- server: ubuntu 16.04 virtual machine, 2G RAM
+- client: ubuntu 14.04 virtual machine, 1G RAM
+- test duration: 30 seconds
+- package size: 128 bytes
+
+| threads | through put | qps     |
+|---------|-------------|---------|
+| 1       | 59.17MB/s   | 238,643 |
+| 10      | 82.97MB/s   | 334,611 |
+| 100     | 81.88MB/s   | 330,235 |
+| 200     | 75.97MB/s   | 306,400 |
+| 400     | 89.29MB/s   | 360,122 |
+| 600     | 94.88MB/s   | 382,639 |
+| 800     | 82.17MB/s   | 331,399 |
+| 1000    | 71.40MB/s   | 287,975 |
+
 # License
 
 [MIT](http://opensource.org/licenses/MIT)
