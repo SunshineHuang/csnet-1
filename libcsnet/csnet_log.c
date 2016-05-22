@@ -225,7 +225,7 @@ csnet_log_new(const char* logname, int level, long rotate_size) {
 
 	/* Bind thread_flush to the last cpu */
 	int cpu_cores = csnet_cpu_cores();
-	if (cpu_cores > 0) {
+	if (cpu_cores > 4) {
 		csnet_bind_to_cpu(tid, cpu_cores - 1);
 	}
 

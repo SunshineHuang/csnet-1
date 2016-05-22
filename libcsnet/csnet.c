@@ -66,15 +66,12 @@ csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_l
 
 void
 csnet_loop(csnet_t* csnet, int timeout) {
-	pthread_t out_tid;
-	pthread_create(&out_tid, NULL, csnet_el_out_loop, csnet->q);
-
 	for (int i = 0; i < csnet->thread_count; i++) {
 		int cpuid;
 		pthread_t in_tid;
 
 		if (pthread_create(&in_tid, NULL, csnet_el_in_loop, csnet->el_list[i]) < 0) {
-			LOG_FATAL(csnet->log, "pthread_create(): %s", strerror(errno));
+			LOG_FATAL(csnet->log, "create csnet_el_in_loop() error. pthread_create(): %s", strerror(errno));
 		}
 
 		if (csnet->cpu_cores > 4) {
@@ -91,17 +88,16 @@ csnet_loop(csnet_t* csnet, int timeout) {
 		}
 	}
 
+	pthread_t out_tid;
+	if (pthread_create(&out_tid, NULL, csnet_el_out_loop, csnet->q) < 0) {
+		LOG_FATAL(csnet->log, "create csnet_el_out_loop() error. pthread_create(): %s", strerror(errno));
+	}
+	if (csnet->cpu_cores > 4) {
+		csnet_bind_to_cpu(out_tid, csnet->cpu_cores - 2);
+	}
+
 	while (1) {
 		int ready = csnet_epoller_wait(csnet->epoller, timeout);
-		if (ready == -1) {
-			if (errno == EINTR) {  /* Stopped by a signal */
-				continue;
-			} else {
-				LOG_ERROR(csnet->log, "epoll_wait(): %s", strerror(errno));
-				return;
-			}
-		}
-
 		for (int i = 0; i < ready; ++i) {
 			csnet_epoller_event_t* ee = csnet_epoller_get_event(csnet->epoller, i);
 			int fd = csnet_epoller_event_fd(ee);
@@ -118,6 +114,15 @@ csnet_loop(csnet_t* csnet, int timeout) {
 				LOG_ERROR(csnet->log, "epoll event error");
 				close(fd);
 				continue;
+			}
+		}
+
+		if (ready == -1) {
+			if (errno == EINTR) {  /* Stopped by a signal */
+				continue;
+			} else {
+				LOG_ERROR(csnet->log, "epoll_wait(): %s", strerror(errno));
+				return;
 			}
 		}
 	}

@@ -372,10 +372,11 @@ void
 csnet_conntor_loop(csnet_conntor_t* conntor) {
 	pthread_t tid;
 	if (pthread_create(&tid, NULL, _conntor_thread, conntor) < 0) {
-		LOG_ERROR(conntor->log, "could not create thread: _conntor_thread()");
-		return;
+		LOG_FATAL(conntor->log, "create _conntor_thread() error. pthread_create(): %s", strerror(errno));
 	}
-
-	LOG_INFO(conntor->log, "create _conntor_thread() done.");
+	int cpu_cores = csnet_cpu_cores();
+	if (cpu_cores > 4) {
+		csnet_bind_to_cpu(tid, cpu_cores - 3);
+	}
 }
 
