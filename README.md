@@ -6,6 +6,7 @@ It uses one event loop per thread reactor mode and takes advantage of multi-core
 # Dependencies
 - Kernel version >= 3.9
 - gcc supports c99
+- libssl-dev
 
 # Server models
 There are two type of server models in CSNet: Middle Server Model and Edge Server Model.
