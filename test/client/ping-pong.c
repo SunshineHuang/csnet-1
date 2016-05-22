@@ -1,4 +1,4 @@
-#include "csnet.h"
+#include "libcsnet.h"
 
 #include <stdio.h>
 #include <stdlib.h>
