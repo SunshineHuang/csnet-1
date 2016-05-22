@@ -18,7 +18,8 @@ int interval;
 char* send_block;
 char* recv_block;
 int smp = 0;
-long* sum;
+long* tpsum;
+long* qpssum;
 
 void prepare_data(int block_size)
 {
@@ -79,23 +80,27 @@ void* worker(void* arg)
 {
 	long nrecv = 0;
 	long nsend = 0;	
+	long qps = 0;
 	int fd = blocking_connect(ip, port);
 	if (fd == -1)
 		exit(1);
 	while (running) {
 		nsend += _send(fd);
 		nrecv += _recv(fd, block_size);
+		qps++;
 	}
 
 	double tp = nrecv + nsend;
 	int tmp = __sync_sub_and_fetch(&smp, 1);
-	sum[tmp] = tp;
+	tpsum[tmp] = tp;
+	qpssum[tmp] = qps;
 	printf("send %ld bytes in %d seconds\n", nsend, interval);
 	printf("recv %ld bytes in %d seconds\n", nrecv, interval);
 	if (tp >= 1024 * 1024)
 		printf("thread[%d] through put: %.2fMB/s\n", tmp, tp/1024/1024/interval);
 	else
 		printf("thread[%d] through put: %.2fKB/s\n", tmp, tp/1024/interval);
+	printf("thread[%d] %ld qps\n", tmp, qps);
 
 	return NULL;
 }
@@ -125,7 +130,8 @@ int main(int argc, char** argv)
 	int nthread = atoi(argv[3]);
 	interval = atoi(argv[4]);
 	block_size = atoi(argv[5]);
-	sum = calloc(nthread, sizeof(long));
+	tpsum = calloc(nthread, sizeof(long));
+	qpssum = calloc(nthread, sizeof(long));
 
 	printf("============================\n");
 	printf("server: ip: %s, port: %d\n", ip, port);
@@ -156,14 +162,18 @@ int main(int argc, char** argv)
 	while (smp) {
 		sleep(1);
 	}
-	double total = 0;
+	double totaltp = 0;
+	long totalqps = 0;
 	for (int i = 0; i < nthread; i++) {
-		total += sum[i];
+		totaltp += tpsum[i];
+		totalqps += qpssum[i];
 	}
 	printf("=======\n");
-	printf("total through put: %.2fMB/s\n", total/1024/1024/interval);
+	printf("total through put: %.2fMB/s\n", totaltp/1024/1024/interval);
+	printf("total qps: %ld\n", totalqps/interval);
 	printf("=======\n");
-	free(sum);
+	free(tpsum);
+	free(qpssum);
 	free(send_block);
 	free(recv_block);
 	return 0;
