@@ -8,13 +8,13 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <stdatomic.h>
 
-csnet_timer_t* timer = NULL;
 char* ip;
 int port;
 int block_size;
-int running = 1;
-int interval;
+_Atomic int running = 0;
+int duration;
 char* send_block;
 char* recv_block;
 int smp = 0;
@@ -84,7 +84,8 @@ void* worker(void* arg)
 	int fd = blocking_connect(ip, port);
 	if (fd == -1)
 		exit(1);
-	while (running) {
+	while (!atomic_load(&running));
+	while (atomic_load(&running)) {
 		nsend += _send(fd);
 		nrecv += _recv(fd, block_size);
 		qps++;
@@ -94,26 +95,15 @@ void* worker(void* arg)
 	int tmp = __sync_sub_and_fetch(&smp, 1);
 	tpsum[tmp] = tp;
 	qpssum[tmp] = qps;
-	printf("send %ld bytes in %d seconds\n", nsend, interval);
-	printf("recv %ld bytes in %d seconds\n", nrecv, interval);
+	/*
+	printf("send %ld bytes in %d seconds\n", nsend, duration);
+	printf("recv %ld bytes in %d seconds\n", nrecv, duration);
 	if (tp >= 1024 * 1024)
-		printf("thread[%d] through put: %.2fMB/s\n", tmp, tp/1024/1024/interval);
+		printf("thread[%d] through put: %.2fMB/s\n", tmp, tp/1024/1024/duration);
 	else
-		printf("thread[%d] through put: %.2fKB/s\n", tmp, tp/1024/interval);
+		printf("thread[%d] through put: %.2fKB/s\n", tmp, tp/1024/duration);
 	printf("thread[%d] %ld qps\n", tmp, qps);
-
-	return NULL;
-}
-
-void* timeout(void* arg)
-{
-	while (1) {
-		int which_slot = csnet_timer_book_keeping(timer);
-		if (which_slot > -1) {
-			running = 0;
-			break;
-		}
-	}
+	*/
 
 	return NULL;
 }
@@ -128,7 +118,7 @@ int main(int argc, char** argv)
 	ip = argv[1];
 	port = atoi(argv[2]);
 	int nthread = atoi(argv[3]);
-	interval = atoi(argv[4]);
+	duration = atoi(argv[4]);
 	block_size = atoi(argv[5]);
 	tpsum = calloc(nthread, sizeof(long));
 	qpssum = calloc(nthread, sizeof(long));
@@ -136,32 +126,27 @@ int main(int argc, char** argv)
 	printf("============================\n");
 	printf("server: ip: %s, port: %d\n", ip, port);
 	printf("client thread count: %d\n", nthread);
-	printf("client timeout: %d seconds\n", interval);
+	printf("client timeout: %d seconds\n", duration);
 	printf("send block size: %d\n", block_size);
 	printf("============================\n\n");
 
 	prepare_data(block_size);
 
-	timer = csnet_timer_new(interval, 109);
-	csnet_timer_insert(timer, 1, 0);
-
-	pthread_t tid;
-	if (pthread_create(&tid, NULL, timeout, NULL) < 0) {
-		printf("pthread_create() error\n");
-		return -1;
-	}
-
+	atomic_store(&running, 0);
 	for (int i = 0; i < nthread; i++) {
 		pthread_t t;
 		pthread_create(&t, NULL, worker, NULL);
 		smp++;
 	}
 
-	pthread_join(tid, NULL);
-	csnet_timer_free(timer);
+	atomic_store(&running, 1);
+	sleep(duration);
+	atomic_store(&running, 0);
+
 	while (smp) {
 		sleep(1);
 	}
+
 	double totaltp = 0;
 	long totalqps = 0;
 	for (int i = 0; i < nthread; i++) {
@@ -169,8 +154,8 @@ int main(int argc, char** argv)
 		totalqps += qpssum[i];
 	}
 	printf("=======\n");
-	printf("total through put: %.2fMB/s\n", totaltp/1024/1024/interval);
-	printf("total qps: %ld\n", totalqps/interval);
+	printf("through put: %.2fMB/s\n", totaltp/1024/1024/duration);
+	printf("qps: %ld\n", totalqps/duration);
 	printf("=======\n");
 	free(tpsum);
 	free(qpssum);
