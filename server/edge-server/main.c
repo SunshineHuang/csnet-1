@@ -39,14 +39,6 @@ int main(int argc, char** argv)
 	daemon(1, 1);
 	*/
 
-	csnet_t* csnet;
-	csnet_config_t* config;
-	csnet_log_t* log;
-	csnet_module_t* module;
-
-	config = csnet_config_new();
-	csnet_config_load(config, argv[1]);
-
 	char* logfile;
 	char* logsize;
 	char* loglevel;
@@ -54,6 +46,15 @@ int main(int argc, char** argv)
 	char* maxconn;
 	char* threadcount;
 	char* server_connect_timeout;
+
+	csnet_config_t* config;
+	csnet_log_t* log;
+	csnet_t* csnet;
+	cs_lfqueue_t* q;
+	csnet_module_t* module;
+
+	config = csnet_config_new();
+	csnet_config_load(config, argv[1]);
 
 	logfile = csnet_config_find(config, "logfile", strlen("logfile"));
 	logsize = csnet_config_find(config, "logsize", strlen("logsize"));
@@ -109,16 +110,18 @@ int main(int argc, char** argv)
 		LOG_FATAL(log, "could not find `server_connect_timeout`!");
 	}
 
-	cs_lfqueue_t* q = cs_lfqueue_new();
+	q = cs_lfqueue_new();
 	module = csnet_module_new();
 	csnet_module_init(module, NULL, log, config, q);
 	csnet_module_load(module, "./business_module.so");
 	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), log, module, q);
 	csnet_loop(csnet, -1);
 
-	csnet_config_free(config);
+	cs_lfqueue_free(q);
 	csnet_free(csnet);
+	csnet_config_free(config);
 	csnet_log_free(log);
+	csnet_module_free(module);
 
         return 0;
 }

@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 	rlimit.rlim_cur = 1024 * 1000;
 	rlimit.rlim_max = 1024 * 1000;
 	if (setrlimit(RLIMIT_NOFILE, &rlimit)) {
-		fprintf(stderr, "setrlimit RLIMIT_NOFILE failed\n");
+		fprintf(stderr, "setrlimit(RLIMIT_NOFILE) failed: %s\n", strerror(errno));
 		fflush(stderr);
 		return -1;
 	}
@@ -41,15 +41,6 @@ int main(int argc, char** argv)
 	daemon(1, 1);
 	*/
 
-	csnet_t* csnet;
-	csnet_log_t* log;
-	csnet_config_t* config;
-	csnet_module_t* module;
-	csnet_conntor_t* conntor;
-
-	config = csnet_config_new();
-	csnet_config_load(config, conf_file);
-
 	char* logfile;
 	char* logsize;
 	char* loglevel;
@@ -58,6 +49,16 @@ int main(int argc, char** argv)
 	char* threadcount;
 	char* server_connect_timeout;
 	char* client_connect_timeout;
+
+	csnet_config_t* config;
+	csnet_log_t* log;
+	csnet_t* csnet;
+	cs_lfqueue_t* q;
+	csnet_module_t* module;
+	csnet_conntor_t* conntor;
+
+	config = csnet_config_new();
+	csnet_config_load(config, conf_file);
 
 	logfile = csnet_config_find(config, "logfile", strlen("logfile"));
 	logsize = csnet_config_find(config, "logsize", strlen("logsize"));
@@ -119,17 +120,18 @@ int main(int argc, char** argv)
 		LOG_FATAL(log, "could not find `client_connect_timeout`!");
 	}
 
-	cs_lfqueue_t* q1 = cs_lfqueue_new();
+	q = cs_lfqueue_new();
 	module = csnet_module_new();
-	conntor = csnet_conntor_new(atoi(client_connect_timeout), conf_file, log, module, q1);
-	csnet_module_init(module, conntor, log, config, q1);
+	conntor = csnet_conntor_new(atoi(client_connect_timeout), conf_file, log, module, q);
+	csnet_module_init(module, conntor, log, config, q);
 	csnet_module_load(module, "./business_module.so");
 	csnet_conntor_connect_servers(conntor);
 	csnet_conntor_loop(conntor);
-	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), log, module, q1);
+	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), log, module, q);
 	LOG_INFO(log, "Server start ok ...");
 	csnet_loop(csnet, -1);
 
+	cs_lfqueue_free(q);
 	csnet_config_free(config);
 	csnet_module_free(module);
 	csnet_conntor_free(conntor);
