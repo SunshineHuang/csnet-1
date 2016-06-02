@@ -187,9 +187,9 @@ csnet_el_free(csnet_el_t* el) {
 
 static inline void
 csnet_el_check_timeout(csnet_el_t* el) {
-	int which_slot = csnet_timer_book_keeping(el->timer);
-	if (which_slot > -1) {
-		hashtable_t* hashtbl = el->timer->timer_hashtbls[which_slot];
+	int expired_wheel = csnet_timer_book_keeping(el->timer);
+	if (expired_wheel > -1) {
+		hashtable_t* hashtbl = el->timer->wheels_tbl[expired_wheel];
 		linked_list_t* keys = ht_get_all_keys(hashtbl);
 		int count = list_count(keys);
 

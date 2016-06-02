@@ -43,9 +43,9 @@ struct slot {
 
 static inline void
 _heartbeat(csnet_conntor_t* conntor, cs_hp_record_t* record) {
-	int which_slot = csnet_timer_book_keeping(conntor->timer);
-	if (which_slot > -1) {
-		hashtable_t* hashtable = conntor->timer->timer_hashtbls[which_slot];
+	int expired_wheel = csnet_timer_book_keeping(conntor->timer);
+	if (expired_wheel > -1) {
+		hashtable_t* hashtable = conntor->timer->wheels_tbl[expired_wheel];
 		linked_list_t* keys = ht_get_all_keys(hashtable);
 		int count = list_count(keys);
 
