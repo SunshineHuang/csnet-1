@@ -61,7 +61,7 @@ business_init(csnet_conntor_t* conntor, csnet_log_t* log, csnet_config_t* config
 }
 
 void
-business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len, cs_hp_record_t* private_record) {
+business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
 	LOG_INFO(LOG, "cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
 		head->cmd, head->len, head->ctxid, data_len);
 
@@ -70,7 +70,7 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len,
 		if (!bm) {
 			return;
 		}
-		long ctxid = bmin_send_msg_req(bm, sock, head, data, data_len, private_record);
+		long ctxid = bmin_send_msg_req(bm, sock, head, data, data_len);
 		if (ctxid == 0) {
 			bmin_send_msg_free(bm);
 		} else {
@@ -78,7 +78,7 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len,
 				LOG_DEBUG(LOG, "insert bm to CTX with ctxid: %ld", ctxid);
 			} else {
 				LOG_ERROR(LOG, "could not insert to CTX. ctxid: %ld", ctxid);
-				bmin_send_msg_err(bm, sock, head, private_record);
+				bmin_send_msg_err(bm, sock, head);
 				bmin_send_msg_free(bm);
 			}
 		}
@@ -89,8 +89,9 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len,
 }
 
 void
-business_timeout(cs_hp_record_t* record) {
+business_timeout() {
 	int expired_wheel = csnet_ctx_book_keeping(CTX);
+	/*
 	if (expired_wheel > -1) {
 		linked_list_t* keys = ht_get_all_keys(CTX->wheels_tbl[expired_wheel]);
 		int count = list_count(keys);
@@ -101,7 +102,7 @@ business_timeout(cs_hp_record_t* record) {
 			void* b = csnet_ctx_search(CTX, *ctxid);
 			if (!b) continue;
 			business_ops_t* ops = (business_ops_t *)b;
-			if (ops->timeout(b, record) == 0) {
+			if (ops->timeout(b) == 0) {
 				free(b);
 				csnet_ctx_delete(CTX, *ctxid);
 			} else {
@@ -110,14 +111,15 @@ business_timeout(cs_hp_record_t* record) {
 		}
 		list_destroy(keys);
 	}
+	*/
 }
 
 static inline void*
 thread_check_timeout(void* arg) {
 	cs_lfqueue_t* q = (cs_lfqueue_t*)arg;
-	cs_hp_record_t* record = allocate_thread_private_hp_record(q->hp);
+	cs_lfqueue_register_thread(q);
 	while (1) {
-		business_timeout(record);
+		business_timeout();
 		wait_milliseconds(1000);
 	}
 	return NULL;

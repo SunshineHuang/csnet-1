@@ -18,6 +18,8 @@ struct cs_hp {
 	cs_hp_record_t* head_hp_record;
 };
 
+__thread cs_hp_record_t* my_record;
+
 static struct hp_list* list_new();
 static void list_free(struct hp_list* l);
 static int list_insert(struct hp_list* l, void* node);
@@ -34,35 +36,35 @@ static void retire_node(cs_hp_t* hp, cs_hp_record_t* private_record, void* node)
 static cs_lfqnode_t* new_qnode(void* data);
 
 /* Each thread call this to allocate a private hp record */
-cs_hp_record_t*
-allocate_thread_private_hp_record(cs_hp_t* hp) {
+void cs_lfqueue_register_thread(cs_lfqueue_t* q) {
 	/* First try to reuse a retired HP record */
-	for (cs_hp_record_t* record = hp->head_hp_record; record; record = record->next) {
+	for (cs_hp_record_t* record = q->HP->head_hp_record; record; record = record->next) {
 		if (record->active || !cas(&record->active, 0, 1)) {
 			continue;
 		}
-		return record;
+		my_record = record;
+		return;
 	}
 
 	/* No HP records avaliable for resue.
 	   Increment H, then allocate a new HP and push it */
-	__sync_fetch_and_add(&hp->H, K);
+	__sync_fetch_and_add(&q->HP->H, K);
 	cs_hp_record_t* new_record = hp_record_new();
 	cs_hp_record_t* old_record;
 
 	do {
-		old_record = hp->head_hp_record;
+		old_record = q->HP->head_hp_record;
 		new_record->next = old_record;
-	} while (!cas(&hp->head_hp_record, old_record, new_record));
+	} while (!cas(&q->HP->head_hp_record, old_record, new_record));
 
-	return new_record;
+	my_record = new_record;
 }
 
 cs_lfqueue_t*
 cs_lfqueue_new() {
 	cs_lfqueue_t* q = malloc(sizeof(*q));
 	q->head = q->tail = new_qnode(NULL);
-	q->hp = hp_new();
+	q->HP = hp_new();
 	return q;
 }
 
@@ -74,19 +76,19 @@ cs_lfqueue_free(cs_lfqueue_t* q) {
 		free(head);
 		head = tmp;
 	}
-	hp_free(q->hp);
+	hp_free(q->HP);
 	free(q);
 }
 
 int
-cs_lfqueue_enq(cs_lfqueue_t* q, cs_hp_record_t* private_record, void* data) {
+cs_lfqueue_enq(cs_lfqueue_t* q, void* data) {
 	cs_lfqnode_t* node = new_qnode(data);
 	cs_lfqnode_t* tail;
 	cs_lfqnode_t* next;
 
 	while (1) {
 		tail = q->tail;
-		private_record->hp[0] = tail;
+		my_record->hp[0] = tail;
 
 		if (q->tail != tail) {
 			continue;
@@ -108,19 +110,19 @@ cs_lfqueue_enq(cs_lfqueue_t* q, cs_hp_record_t* private_record, void* data) {
 	}
 
 	cas(&q->tail, tail, node);
-	private_record->hp[0] = NULL;
+	my_record->hp[0] = NULL;
 	return 1;
 }
 
 int
-cs_lfqueue_deq(cs_lfqueue_t* q, cs_hp_record_t* private_record, void** data) {
+cs_lfqueue_deq(cs_lfqueue_t* q, void** data) {
 	cs_lfqnode_t* head;
 	cs_lfqnode_t* tail;
 	cs_lfqnode_t* next;
 
 	while (1) {
 		head = q->head;
-		private_record->hp[0] = head;
+		my_record->hp[0] = head;
 
 		if (q->head != head) {
 			continue;
@@ -128,7 +130,7 @@ cs_lfqueue_deq(cs_lfqueue_t* q, cs_hp_record_t* private_record, void** data) {
 
 		tail = q->tail;
 		next = head->next;
-		private_record->hp[1] = next;
+		my_record->hp[1] = next;
 
 		if (q->head != head) {
 			continue;
@@ -149,9 +151,9 @@ cs_lfqueue_deq(cs_lfqueue_t* q, cs_hp_record_t* private_record, void** data) {
 		}
 	}
 
-	retire_node(q->hp, private_record, (void*)head);
-	private_record->hp[0] = NULL;
-	private_record->hp[1] = NULL;
+	retire_node(q->HP, my_record, (void*)head);
+	my_record->hp[0] = NULL;
+	my_record->hp[1] = NULL;
 
 	return 1;
 }

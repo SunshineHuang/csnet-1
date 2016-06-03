@@ -44,9 +44,8 @@ csnet_module_load(csnet_module_t* m, const char* module) {
 }
 
 void
-csnet_module_entry(csnet_module_t* m, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len, cs_hp_record_t* record)
-{
-	m->business_entry(sock, head, data, data_len, record);
+csnet_module_entry(csnet_module_t* m, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
+	m->business_entry(sock, head, data, data_len);
 }
 
 void

@@ -2,7 +2,6 @@ include ../../../public.mk
 CFLAGS += -I$(dev_dir)libmodule \
           -L$(dev_dir)src \
           -L$(dev_dir)libmodule
-LIBS += -lmodule
 
 obj_dir = .objs
 local_srcs = $(wildcard *.c)
@@ -17,7 +16,7 @@ target = business_module.so
 all: $(target)
 
 $(target): $(objs)
-	$(cc) $(CFLAGS) -shared -o $@ $(objs) $(LIBS)
+	$(cc) $(CFLAGS) -shared -nostartfiles -o $@ $(objs) -lmodule $(LIBS)
 
 $(obj_dir)/%.o: %.c | $(obj_dir)
 	$(cc) $(CFLAGS) -c $< -o $@

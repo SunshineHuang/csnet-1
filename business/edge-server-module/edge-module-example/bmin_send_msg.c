@@ -30,7 +30,7 @@ bmin_send_msg_new(csnet_sock_t* sock, csnet_head_t* head) {
 }
 
 int64_t
-bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len, cs_hp_record_t* private_record) {
+bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
 	csnet_msg_t* csnet_msg;
 	csnet_unpack_t unpack;
 	csnet_unpack_init(&unpack, data, data_len);
@@ -54,32 +54,32 @@ bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, i
 		csnet_msg = csnet_msg_new(h.len, sock);
 		csnet_msg_append(csnet_msg, (char*)&h, HEAD_LEN);
 		csnet_msg_append(csnet_msg, pack.data, pack.len);
-		cs_lfqueue_enq(Q, private_record, csnet_msg);
+		cs_lfqueue_enq(Q, csnet_msg);
 	} else {
 		LOG_ERROR(LOG, "unpack error");
 		h.len = HEAD_LEN;
 		h.status = HS_PKG_ERR;
 		csnet_msg = csnet_msg_new(h.len, sock);
 		csnet_msg_append(csnet_msg, (char*)&h, HEAD_LEN);
-		cs_lfqueue_enq(Q, private_record, csnet_msg);
+		cs_lfqueue_enq(Q, csnet_msg);
 	}
 
 	return 0;
 }
 
 int64_t
-bmin_send_msg_rsp(void* b, csnet_head_t* head, char* data, int data_len, cs_hp_record_t* record) {
+bmin_send_msg_rsp(void* b, csnet_head_t* head, char* data, int data_len) {
 	return 0;
 }
 
 int64_t
-bmin_send_msg_timeout(void* b, cs_hp_record_t* private_record)
-{
+bmin_send_msg_timeout(void* b) {
 	return 0;
 }
 
 void
-bmin_send_msg_err(void* b, csnet_sock_t* sock, csnet_head_t* head, cs_hp_record_t* private_record) {
+bmin_send_msg_err(void* b, csnet_sock_t* sock, csnet_head_t* head) {
+
 }
 
 void

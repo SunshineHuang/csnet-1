@@ -30,16 +30,16 @@ struct cs_lfqnode {
 struct cs_lfqueue {
 	cs_lfqnode_t* head;
 	cs_lfqnode_t* tail;
-	cs_hp_t* hp;
+	cs_hp_t* HP;
 };
-
-/* Each thread call this to allocate a private hp record */
-cs_hp_record_t* allocate_thread_private_hp_record(cs_hp_t* hp);
 
 cs_lfqueue_t* cs_lfqueue_new();
 void cs_lfqueue_free(cs_lfqueue_t*);
-int cs_lfqueue_enq(cs_lfqueue_t*, cs_hp_record_t* private_record, void* data);
-int cs_lfqueue_deq(cs_lfqueue_t*, cs_hp_record_t* private_record, void** data);
+
+/* Each thread call this to allocate a private hp record */
+void cs_lfqueue_register_thread(cs_lfqueue_t*);
+int cs_lfqueue_enq(cs_lfqueue_t*, void* data);
+int cs_lfqueue_deq(cs_lfqueue_t*, void** data);
 
 #endif  /* cs_lfqueue_h */
 

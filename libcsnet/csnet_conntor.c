@@ -42,7 +42,7 @@ struct slot {
 };
 
 static inline void
-_heartbeat(csnet_conntor_t* conntor, cs_hp_record_t* record) {
+_heartbeat(csnet_conntor_t* conntor) {
 	int expired_wheel = csnet_timer_book_keeping(conntor->timer);
 	if (expired_wheel > -1) {
 		hashtable_t* hashtable = conntor->timer->wheels_tbl[expired_wheel];
@@ -68,7 +68,7 @@ _heartbeat(csnet_conntor_t* conntor, cs_hp_record_t* record) {
 				csnet_sock_t* sock = csnet_sockset_get(conntor->sockset, *sid);
 				csnet_msg_t* msg = csnet_msg_new(h.len, sock);
 				csnet_msg_append(msg, (char*)&h, h.len);
-				cs_lfqueue_enq(conntor->q, record, msg);
+				cs_lfqueue_enq(conntor->q, msg);
 			}
 		}
 
@@ -80,7 +80,7 @@ static void*
 _conntor_thread(void* arg) {
 	csnet_conntor_t* conntor = (csnet_conntor_t *)arg;
 	cs_lfqueue_t* q = conntor->q;
-	cs_hp_record_t* record = allocate_thread_private_hp_record(q->hp);
+	cs_lfqueue_register_thread(q);
 
 	while (1) {
 		int ready = csnet_epoller_wait(conntor->epoller, 1000);
@@ -131,7 +131,7 @@ _conntor_thread(void* arg) {
 
 						if (head->cmd != CSNET_HEARTBEAT_ACK) {
 							csnet_module_entry(conntor->module, sock, head, data + HEAD_LEN,
-									head->len - HEAD_LEN, record);
+									head->len - HEAD_LEN);
 						} else {
 							/* Do nothing when recv CSNET_HEARTBEAT_ACK */
 						}
@@ -170,7 +170,7 @@ _conntor_thread(void* arg) {
 		} /* end of for (ready) */
 
 		csnet_conntor_reconnect_servers(conntor);
-		_heartbeat(conntor, record);
+		_heartbeat(conntor);
 
 		if (ready == -1) {
 			if (errno == EINTR) {

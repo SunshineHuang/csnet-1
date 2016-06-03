@@ -58,11 +58,11 @@ csnet_el_add_connection(csnet_el_t* el, int fd) {
 void*
 csnet_el_out_loop(void* arg) {
 	cs_lfqueue_t* q = (cs_lfqueue_t*)arg;
-	cs_hp_record_t* private_record = allocate_thread_private_hp_record(q->hp);
+	cs_lfqueue_register_thread(q);
 
 	while (1) {
 		csnet_msg_t* msg = NULL;
-		if (cs_lfqueue_deq(q, private_record, (void*)&msg) == 1) {
+		if (cs_lfqueue_deq(q, (void*)&msg) == 1) {
 			int nsend = csnet_sock_send(msg->sock, msg->data, msg->size);
 			csnet_msg_free(msg);
 		} else {
@@ -74,7 +74,7 @@ csnet_el_out_loop(void* arg) {
 void*
 csnet_el_in_loop(void* arg) {
 	csnet_el_t* el = (csnet_el_t*)arg;
-	cs_hp_record_t* record = allocate_thread_private_hp_record(el->q->hp);
+	cs_lfqueue_register_thread(el->q);
 
 	while (1) {
 		int ready = csnet_epoller_wait(el->epoller, 1000);
@@ -117,7 +117,7 @@ csnet_el_in_loop(void* arg) {
 
 						if (head->cmd != CSNET_HEARTBEAT_SYN) {
 							csnet_module_entry(el->module, sock, head, data + HEAD_LEN,
-									head->len - HEAD_LEN, record);
+									head->len - HEAD_LEN);
 						} else {
 							LOG_INFO(el->log, "recv heartbeat syn from socket[%d], sid[%d]", fd, sid);
 							csnet_head_t h = {
@@ -132,7 +132,7 @@ csnet_el_in_loop(void* arg) {
 
 							csnet_msg_t* msg = csnet_msg_new(h.len, sock);
 							csnet_msg_append(msg, (char*)&h, h.len);
-							cs_lfqueue_enq(el->q, record, msg);
+							cs_lfqueue_enq(el->q, msg);
 							csnet_timer_update(el->timer, sid);
 						}
 

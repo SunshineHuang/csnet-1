@@ -37,7 +37,7 @@ bmin_send_msg_new(csnet_sock_t* sock, csnet_head_t* head) {
 }
 
 int64_t
-bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len, cs_hp_record_t* private_record) {
+bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
 	struct bmin_send_msg* bm = (struct bmin_send_msg *)b;
 
 	csnet_msg_t* csnet_msg;
@@ -55,13 +55,13 @@ bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, i
 	csnet_msg = csnet_msg_new(h.len, server_sock);
 	csnet_msg_append(csnet_msg, (char*)&h, HEAD_LEN);
 	csnet_msg_append(csnet_msg, data, data_len);
-	cs_lfqueue_enq(Q, private_record, csnet_msg);
+	cs_lfqueue_enq(Q, csnet_msg);
 
 	return h.ctxid;
 }
 
 int64_t
-bmin_send_msg_rsp(void* b, csnet_head_t* head, char* data, int data_len, cs_hp_record_t* private_record) {
+bmin_send_msg_rsp(void* b, csnet_head_t* head, char* data, int data_len) {
 	struct bmin_send_msg* bm = (struct bmin_send_msg *)b;
 
 	bm->head.cmd = csnet_echo_msg_rsp;
@@ -79,13 +79,13 @@ bmin_send_msg_rsp(void* b, csnet_head_t* head, char* data, int data_len, cs_hp_r
 	csnet_msg_t* msg = csnet_msg_new(bm->head.len, bm->sock);
 	csnet_msg_append(msg, (char*)&bm->head, HEAD_LEN);
 	csnet_msg_append(msg, data, data_len);
-	cs_lfqueue_enq(Q, private_record, msg);
+	cs_lfqueue_enq(Q, msg);
 
 	return 0;
 }
 
 int64_t
-bmin_send_msg_timeout(void* b, cs_hp_record_t* private_record) {
+bmin_send_msg_timeout(void* b) {
 	struct bmin_send_msg* bm = (struct bmin_send_msg *)b;
 	csnet_head_t h = {
 		.len =  HEAD_LEN,
@@ -98,12 +98,12 @@ bmin_send_msg_timeout(void* b, cs_hp_record_t* private_record) {
 	};
 	csnet_msg_t* msg = csnet_msg_new(h.len, bm->sock);
 	csnet_msg_append(msg, (char*)&bm->head, HEAD_LEN);
-	cs_lfqueue_enq(Q, private_record, msg);
+	cs_lfqueue_enq(Q, msg);
 	return 0;
 }
 
 void
-bmin_send_msg_err(void* b, csnet_sock_t* sock, csnet_head_t* head, cs_hp_record_t* private_record) {
+bmin_send_msg_err(void* b, csnet_sock_t* sock, csnet_head_t* head) {
 	struct bmin_send_msg* bm = (struct bmin_send_msg *)b;
 
 	bm->head.cmd = csnet_echo_msg_rsp;
@@ -112,7 +112,7 @@ bmin_send_msg_err(void* b, csnet_sock_t* sock, csnet_head_t* head, cs_hp_record_
 
 	csnet_msg_t* msg = csnet_msg_new(bm->head.len, bm->sock);
 	csnet_msg_append(msg, (char*)&bm->head, HEAD_LEN);
-	cs_lfqueue_enq(Q, private_record, msg);
+	cs_lfqueue_enq(Q, msg);
 }
 
 void
