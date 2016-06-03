@@ -8,12 +8,12 @@
 
 typedef struct csnet_ctx {
 	int64_t ctxid;
-	int timeout;
-	int prev_slot;
-	int curr_slot;
 	unsigned long curr_time;
-	hashtable_t* timerid_hashtbl;
-	hashtable_t** hashtbls;
+	int timeout;
+	int prev_wheel;
+	int curr_wheel;
+	hashtable_t* which_wheel_tbl;
+	hashtable_t** wheels_tbl;
 } csnet_ctx_t;
 
 csnet_ctx_t* csnet_ctx_new(int size, int timeout);

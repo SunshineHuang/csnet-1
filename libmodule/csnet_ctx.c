@@ -22,14 +22,14 @@ csnet_ctx_new(int size, int timeout) {
 
 	ctx->ctxid = 1;
 	ctx->timeout = timeout;
-	ctx->prev_slot = timeout;
-	ctx->curr_slot = 0;
+	ctx->prev_wheel = timeout;
+	ctx->curr_wheel = 0;
 	ctx->curr_time = gettime();
-	ctx->timerid_hashtbl = ht_create(timeout, timeout * size, NULL);
-	ctx->hashtbls = (hashtable_t **)calloc(timeout + 1, sizeof(hashtable_t*));
+	ctx->which_wheel_tbl = ht_create(timeout, timeout * size, NULL);
+	ctx->wheels_tbl = (hashtable_t **)calloc(timeout + 1, sizeof(hashtable_t*));
 
 	for (int i = 0; i < timeout + 1; i++) {
-		ctx->hashtbls[i] = ht_create(size, size, NULL);
+		ctx->wheels_tbl[i] = ht_create(size, size, NULL);
 	}
 
 	return ctx;
@@ -37,11 +37,11 @@ csnet_ctx_new(int size, int timeout) {
 
 void
 csnet_ctx_free(csnet_ctx_t* ctx) {
-	ht_destroy(ctx->timerid_hashtbl);
+	ht_destroy(ctx->which_wheel_tbl);
 	for (int i = 0; i < ctx->timeout + 1; i++) {
-		ht_destroy(ctx->hashtbls[i]);
+		ht_destroy(ctx->wheels_tbl[i]);
 	}
-	free(ctx->hashtbls);
+	free(ctx->wheels_tbl);
 	free(ctx);
 }
 
@@ -57,33 +57,33 @@ csnet_ctx_ctxid(csnet_ctx_t* ctx) {
 
 int
 csnet_ctx_insert(csnet_ctx_t* ctx, int64_t ctxid, void* business, int bsize) {
-	int* which_slot = malloc(sizeof(int));
-	if (!which_slot) {
+	int* which_wheel = malloc(sizeof(int));
+	if (!which_wheel) {
 		csnet_oom(sizeof(int));
 	}
-	*which_slot = ctx->prev_slot;
-	if (ht_set(ctx->timerid_hashtbl, &ctxid, sizeof(int64_t), which_slot, sizeof(int*)) == -1) {
-		free(which_slot);
+	*which_wheel = ctx->prev_wheel;
+	if (ht_set(ctx->which_wheel_tbl, &ctxid, sizeof(int64_t), which_wheel, sizeof(int*)) == -1) {
+		free(which_wheel);
 		return -1;
 	}
-	return ht_set(ctx->hashtbls[*which_slot], &ctxid, sizeof(int64_t), business, bsize);
+	return ht_set(ctx->wheels_tbl[*which_wheel], &ctxid, sizeof(int64_t), business, bsize);
 }
 
 void
 csnet_ctx_update(csnet_ctx_t* ctx, int64_t ctxid) {
-	int prev_slot = ctx->prev_slot;
-	int curr_slot = ctx->curr_slot;
-	int* which_slot = ht_get(ctx->timerid_hashtbl, &ctxid, sizeof(int64_t), NULL);
+	int prev_wheel = ctx->prev_wheel;
+	int curr_wheel = ctx->curr_wheel;
+	int* which_wheel = ht_get(ctx->which_wheel_tbl, &ctxid, sizeof(int64_t), NULL);
 
-	if (which_slot) {
-		if (*which_slot != prev_slot) {
+	if (which_wheel) {
+		if (*which_wheel != prev_wheel) {
 			size_t bsize = 0;
-			void* b = ht_get(ctx->hashtbls[*which_slot], &ctxid, sizeof(int64_t), &bsize);
+			void* b = ht_get(ctx->wheels_tbl[*which_wheel], &ctxid, sizeof(int64_t), &bsize);
 
 			if (b) {
-				ht_delete(ctx->hashtbls[*which_slot], &ctxid, sizeof(int64_t), NULL, NULL);
-				*which_slot = curr_slot;
-				ht_set(ctx->hashtbls[*which_slot], &ctxid, sizeof(int64_t), b, bsize);
+				ht_delete(ctx->wheels_tbl[*which_wheel], &ctxid, sizeof(int64_t), NULL, NULL);
+				*which_wheel = curr_wheel;
+				ht_set(ctx->wheels_tbl[*which_wheel], &ctxid, sizeof(int64_t), b, bsize);
 			}
 		}
 	}
@@ -91,9 +91,9 @@ csnet_ctx_update(csnet_ctx_t* ctx, int64_t ctxid) {
 
 void*
 csnet_ctx_search(csnet_ctx_t* ctx, int64_t ctxid) {
-	int* which_slot = ht_get(ctx->timerid_hashtbl, &ctxid, sizeof(int64_t), NULL);
-	if (which_slot) {
-		return ht_get(ctx->hashtbls[*which_slot], &ctxid, sizeof(int64_t), NULL);
+	int* which_wheel = ht_get(ctx->which_wheel_tbl, &ctxid, sizeof(int64_t), NULL);
+	if (which_wheel) {
+		return ht_get(ctx->wheels_tbl[*which_wheel], &ctxid, sizeof(int64_t), NULL);
 	}
 	return NULL;
 }
@@ -104,11 +104,11 @@ csnet_ctx_search(csnet_ctx_t* ctx, int64_t ctxid) {
  */
 void
 csnet_ctx_delete(csnet_ctx_t* ctx, int64_t ctxid) {
-	int* which_slot = ht_get(ctx->timerid_hashtbl, &ctxid, sizeof(int64_t), NULL);
-	if (which_slot) {
-		ht_delete(ctx->hashtbls[*which_slot], &ctxid, sizeof(int64_t), NULL, NULL);
-		ht_delete(ctx->timerid_hashtbl, &ctxid, sizeof(int64_t), NULL, NULL);
-		free(which_slot);
+	int* which_wheel = ht_get(ctx->which_wheel_tbl, &ctxid, sizeof(int64_t), NULL);
+	if (which_wheel) {
+		ht_delete(ctx->wheels_tbl[*which_wheel], &ctxid, sizeof(int64_t), NULL, NULL);
+		ht_delete(ctx->which_wheel_tbl, &ctxid, sizeof(int64_t), NULL, NULL);
+		free(which_wheel);
 	}
 }
 
@@ -120,16 +120,16 @@ csnet_ctx_book_keeping(csnet_ctx_t* ctx) {
 	}
 
 	ctx->curr_time = now;
-	ctx->prev_slot = ctx->curr_slot;
-	__sync_fetch_and_add(&ctx->curr_slot, 1);
-	if (ctx->curr_slot > ctx->timeout) {
-		ctx->curr_slot = 0;
+	ctx->prev_wheel = ctx->curr_wheel;
+	__sync_fetch_and_add(&ctx->curr_wheel, 1);
+	if (ctx->curr_wheel > ctx->timeout) {
+		ctx->curr_wheel = 0;
 	}
 
-	int count = ht_count(ctx->hashtbls[ctx->curr_slot]);
+	int count = ht_count(ctx->wheels_tbl[ctx->curr_wheel]);
 	if (count <= 0) {
 		return -1;
 	}
-	return ctx->curr_slot;
+	return ctx->curr_wheel;
 }
 

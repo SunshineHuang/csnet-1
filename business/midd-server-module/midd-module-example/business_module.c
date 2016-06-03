@@ -100,9 +100,9 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len,
 }
 
 void business_timeout(cs_hp_record_t* record) {
-	int which_slot = csnet_ctx_book_keeping(CTX);
-	if (which_slot > -1) {
-		linked_list_t* keys = ht_get_all_keys(CTX->hashtbls[which_slot]);
+	int expired_wheel = csnet_ctx_book_keeping(CTX);
+	if (expired_hweel > -1) {
+		linked_list_t* keys = ht_get_all_keys(CTX->wheels_tbl[expired_wheel]);
 		int count = list_count(keys);
 		for (int i = 0; i < count; i++) {
 			hashtable_key_t* key = list_pick_value(keys, i);
