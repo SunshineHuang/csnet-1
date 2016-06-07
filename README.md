@@ -1,40 +1,44 @@
 # Introduce
 A non-blocking, multi-threaded high performance network library/framework on Linux.
 CS means **C**attle **S**hed, not **C**omputer **S**cience.
-It uses one event loop per thread reactor mode and takes advantage of multi-cores.
+It uses one event loop per thread reactor I/O mode and takes advantage of multi-cores.
+
+## Server models
+There are two type of server models in CSNet: Middle Server Model and Edge Server Model.
+
+            ┌────────────┐
+            │edge server │
+            └────────────┘
+                   ▲
+                   │
+                   ▼
+         ┌──────────────────┐
+         │   middle server  │
+         └──────────────────┘
+                   ▲
+                   │
+                   ▼
+            ┌────────────┐
+            │   clients  │
+            └────────────┘
+
+
+## Hot patching
+A server model consist of a executable file (server) and a business module file (business_module.so). It's easy to
+write your own business logic codes throuth the business module. If you found bugs in your business logic code, or you
+need new business logic, just copy the new compiled business module (e.g, business_module.so.virsion) to the dir where
+you deployed it, and it will be **hot patch without killed the process**.
+
+## Request/Response
+CSNet uses one request one response method to handle every request. Every request should receive a response within
+`business_timeout` seconds, or the related business timeout handler will be called.
+
 
 # Requirements and Dependencies
 - Kernel version >= 3.9
 - gcc supports c99
 - libssl-dev
 
-# Server models
-There are two type of server models in CSNet: Middle Server Model and Edge Server Model.
-Every request in those model has a response, if the request does not receive a response in `business_timeout`,
-and the related business timeout handler will be called.
-
-
-            ┌────────────┐
-            │            │
-            │edge server │
-            │            │
-            └────────────┘
-                   ▲
-                   │
-                   ▼
-         ┌──────────────────┐
-         │                  │
-         │   middle server  │
-         │                  │
-         └──────────────────┘
-                   ▲
-                   │
-                   ▼
-            ┌────────────┐
-            │            │
-            │   client   │
-            │            │
-            └────────────┘
 
 # Components
 ## Generic Data Structures
@@ -53,7 +57,13 @@ and the related business timeout handler will be called.
 - stack (based on tagged pointer + double-word cas)
 - queue (based on hazard pointer + single-word cas)
 
-## Logger
+## High performance Logger
+| threads | lines per thread | total lines | seconds |
+|---------|------------------|-------------|---------|
+|1        | 10,000,000       | 10,000,000  | 10      |
+|2        | 10,000,000       | 20,000,000  | 15      |
+|3        | 10,000,000       | 30,000,000  | 18      |
+|10       | 10,000,000       | 100,000,000 | 70      |
 
 ## Serialization/Deserialization
 
