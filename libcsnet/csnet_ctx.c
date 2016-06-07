@@ -1,10 +1,49 @@
 #include "csnet_ctx.h"
+#include "business_ops.h"
 #include "libcsnet.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <pthread.h>
+
+static inline void* thread_check_timeout(void* arg);
+
+void
+business_timeout(csnet_ctx_t* ctx) {
+	int expired_wheel = csnet_ctx_book_keeping(ctx);
+	if (expired_wheel > -1) {
+		linked_list_t* keys = ht_get_all_keys(ctx->wheels_tbl[expired_wheel]);
+		int count = list_count(keys);
+		for (int i = 0; i < count; i++) {
+			hashtable_key_t* key = list_pick_value(keys, i);
+			if (!key) continue;
+			long* ctxid = (long *)key->data;
+			void* b = csnet_ctx_search(ctx, *ctxid);
+			if (!b) continue;
+			business_ops_t* ops = (business_ops_t *)b;
+			if (ops->timeout(b) == 0) {
+				free(b);
+				csnet_ctx_delete(ctx, *ctxid);
+			} else {
+				csnet_ctx_update(ctx, *ctxid);
+			}
+		}
+		list_destroy(keys);
+	}
+}
+
+static inline void*
+thread_check_timeout(void* arg) {
+	csnet_ctx_t* ctx = arg;
+	cs_lfqueue_t* q = ctx->q;
+	cs_lfqueue_register_thread(q);
+	while (1) {
+		business_timeout(ctx);
+		wait_milliseconds(1000);
+	}
+	return NULL;
+}
 
 inline static unsigned long
 gettime() {
@@ -14,8 +53,9 @@ gettime() {
 }
 
 csnet_ctx_t*
-csnet_ctx_new(int size, int timeout) {
-	csnet_ctx_t* ctx = calloc(1, sizeof(*ctx));
+csnet_ctx_new(int size, int timeout, cs_lfqueue_t* q) {
+	pthread_t tid;
+	csnet_ctx_t* ctx = calloc(1, sizeof(*ctx) + (timeout + 1) * sizeof(hashtable_t*));
 	if (!ctx) {
 		csnet_oom(sizeof(*ctx));
 	}
@@ -25,13 +65,12 @@ csnet_ctx_new(int size, int timeout) {
 	ctx->prev_wheel = timeout;
 	ctx->curr_wheel = 0;
 	ctx->curr_time = gettime();
+	ctx->q = q;
 	ctx->which_wheel_tbl = ht_create(timeout, timeout * size, NULL);
-	ctx->wheels_tbl = (hashtable_t **)calloc(timeout + 1, sizeof(hashtable_t*));
-
 	for (int i = 0; i < timeout + 1; i++) {
 		ctx->wheels_tbl[i] = ht_create(size, size, NULL);
 	}
-
+	pthread_create(&tid, NULL, thread_check_timeout, ctx);
 	return ctx;
 }
 
@@ -41,7 +80,6 @@ csnet_ctx_free(csnet_ctx_t* ctx) {
 	for (int i = 0; i < ctx->timeout + 1; i++) {
 		ht_destroy(ctx->wheels_tbl[i]);
 	}
-	free(ctx->wheels_tbl);
 	free(ctx);
 }
 

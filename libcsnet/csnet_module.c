@@ -16,10 +16,10 @@ csnet_module_new() {
 }
 
 void
-csnet_module_init(csnet_module_t* m, void* conntor, csnet_log_t* log, csnet_config_t* config, cs_lfqueue_t* q) {
+csnet_module_init(csnet_module_t* m, void* conntor, csnet_log_t* log, csnet_ctx_t* ctx, cs_lfqueue_t* q) {
 	m->conntor = conntor;
 	m->log = log;
-	m->config = config;
+	m->ctx = ctx;
 	m->q = q;
 }
 
@@ -40,7 +40,7 @@ csnet_module_load(csnet_module_t* m, const char* module) {
 		LOG_FATAL(m->log, "%s", dlerror());
 	}
 
-	m->business_init(m->conntor, m->log, m->config, m->q);
+	m->business_init(m->conntor, m->log, m->ctx, m->q);
 }
 
 void

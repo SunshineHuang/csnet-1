@@ -2,21 +2,26 @@
 #define csnet_ctx_h
 
 #include "hlhashtable.h"
+#include "csnet_ctx.h"
+#include "cs-lfqueue.h"
 
 #include <pthread.h>
 #include <stdint.h>
 
+#define CTX_SIZE 0x100000
+
 typedef struct csnet_ctx {
 	int64_t ctxid;
-	unsigned long curr_time;
 	int timeout;
 	int prev_wheel;
 	int curr_wheel;
+	unsigned long curr_time;
+	cs_lfqueue_t* q;
 	hashtable_t* which_wheel_tbl;
-	hashtable_t** wheels_tbl;
+	hashtable_t* wheels_tbl[0];
 } csnet_ctx_t;
 
-csnet_ctx_t* csnet_ctx_new(int size, int timeout);
+csnet_ctx_t* csnet_ctx_new(int size, int timeout, cs_lfqueue_t* q);
 void csnet_ctx_free(csnet_ctx_t*);
 int csnet_ctx_insert(csnet_ctx_t*, int64_t ctxid, void* business, int bsize);
 int64_t csnet_ctx_ctxid(csnet_ctx_t*);

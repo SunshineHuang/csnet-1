@@ -49,6 +49,7 @@ int main(int argc, char** argv)
 	char* threadcount;
 	char* server_connect_timeout;
 	char* client_connect_timeout;
+	char* business_timeout;
 
 	csnet_config_t* config;
 	csnet_log_t* log;
@@ -56,6 +57,7 @@ int main(int argc, char** argv)
 	cs_lfqueue_t* q;
 	csnet_module_t* module;
 	csnet_conntor_t* conntor;
+	csnet_ctx_t* ctx;
 
 	config = csnet_config_new();
 	csnet_config_load(config, conf_file);
@@ -99,6 +101,7 @@ int main(int argc, char** argv)
 	threadcount = csnet_config_find(config, "threadcount", strlen("threadcount"));
 	server_connect_timeout = csnet_config_find(config, "server_connect_timeout", strlen("server_connect_timeout"));
 	client_connect_timeout = csnet_config_find(config, "client_connect_timeout", strlen("client_connect_timeout"));
+	business_timeout = csnet_config_find(config, "business_timeout", strlen("business_timeout"));
 
 	if (!port) {
 		LOG_FATAL(log, "could not find `port`!");
@@ -120,10 +123,15 @@ int main(int argc, char** argv)
 		LOG_FATAL(log, "could not find `client_connect_timeout`!");
 	}
 
-	q = cs_lfqueue_new();
+	if (!business_timeout) {
+		LOG_FATAL(log, "could not find `business_timeout`!");
+	}
+
+ 	q = cs_lfqueue_new();
+	ctx = csnet_ctx_new(CTX_SIZE, atoi(business_timeout), q);
 	module = csnet_module_new();
 	conntor = csnet_conntor_new(atoi(client_connect_timeout), conf_file, log, module, q);
-	csnet_module_init(module, conntor, log, config, q);
+	csnet_module_init(module, conntor, log, ctx, q);
 	csnet_module_load(module, "./business_module.so");
 	csnet_conntor_connect_servers(conntor);
 	csnet_conntor_loop(conntor);
@@ -137,6 +145,7 @@ int main(int argc, char** argv)
 	csnet_conntor_free(conntor);
 	csnet_log_free(log);
 	csnet_free(csnet);
+	csnet_ctx_free(ctx);
 
         return 0;
 }

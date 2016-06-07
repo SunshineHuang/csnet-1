@@ -1,4 +1,4 @@
-subdirs = libcsnet libmodule business server
+subdirs = libcsnet business server
  
 target:
 	for dir in $(subdirs); do \

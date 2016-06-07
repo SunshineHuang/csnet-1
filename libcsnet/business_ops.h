@@ -1,6 +1,9 @@
 #ifndef business_ops_h
 #define business_ops_h
 
+#include "csnet_head.h"
+#include "csnet_sock.h"
+
 #include <stdint.h>
 
 typedef int64_t (*rsp_cb) (void* b, csnet_head_t* head, char* body, int body_len);
