@@ -17,7 +17,7 @@ typedef struct csnet_timer {
 	int curr_wheel;
 	unsigned long curr_time;
 	hashtable_t* which_wheel_tbl;
-	hashtable_t** wheels_tbl;
+	hashtable_t* wheels_tbl[0];
 } csnet_timer_t;
 
 csnet_timer_t* csnet_timer_new(int interval, int wheel_count);

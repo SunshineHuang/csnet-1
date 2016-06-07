@@ -21,7 +21,7 @@ SOCKID(csnet_sockset_t* set) {
 
 csnet_sockset_t*
 csnet_sockset_new(int max_conn, unsigned int start_sid) {
-	csnet_sockset_t* set = calloc(1, sizeof(*set));
+	csnet_sockset_t* set = calloc(1, sizeof(*set) + max_conn * sizeof(csnet_sock_t*));
 	if (!set) {
 		csnet_oom(sizeof(*set));
 	}
@@ -29,12 +29,6 @@ csnet_sockset_new(int max_conn, unsigned int start_sid) {
 	set->start_sid = start_sid;
 	set->curr_sid = start_sid;
 	set->max_conn = max_conn;
-	set->set = calloc(max_conn, sizeof(csnet_sock_t*));
-
-	if (!set->set) {
-		csnet_oom(max_conn * sizeof(csnet_sock_t*));
-	}
-
 	for (int i = 0; i < max_conn; i++) {
 		csnet_sock_t* sock = csnet_sock_new(64 * 1024);
 		set->set[i] = sock;
@@ -51,7 +45,6 @@ csnet_sockset_free(csnet_sockset_t* set) {
 		}
 		csnet_sock_free(set->set[i]);
 	}
-	free(set->set);
 	free(set);
 }
 

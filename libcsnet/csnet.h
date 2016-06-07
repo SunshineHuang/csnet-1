@@ -13,9 +13,9 @@ typedef struct csnet {
 	int thread_count;
 	int max_conn;
 	csnet_epoller_t* epoller;
-	csnet_el_t** el_list;
 	csnet_log_t* log;
 	cs_lfqueue_t* q;
+	csnet_el_t* el_list[0];
 } csnet_t;
 
 csnet_t* csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q);

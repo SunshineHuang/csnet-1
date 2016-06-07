@@ -22,7 +22,7 @@ static void _do_accept(csnet_t* csnet, int* listenfd);
 
 csnet_t*
 csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q) {
-	csnet_t* csnet = calloc(1, sizeof(*csnet));
+	csnet_t* csnet = calloc(1, sizeof(*csnet) + thread_count * sizeof(csnet_el_t*));
 	if (!csnet) {
 		csnet_oom(sizeof(*csnet));
 	}
@@ -47,11 +47,6 @@ csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_l
 
 	if (csnet_epoller_add(csnet->epoller, csnet->listenfd, 0) == -1) {
 		LOG_FATAL(log, "epoll_ctl(): %s", strerror(errno));
-	}
-
-	csnet->el_list = calloc(thread_count, sizeof(csnet_el_t*));
-	if (!csnet->el_list) {
-		csnet_oom(thread_count * sizeof(csnet_el_t*));
 	}
 
 	for (int i = 0; i < thread_count; i++) {
@@ -135,8 +130,6 @@ csnet_free(csnet_t* csnet) {
 	for (int i = 0; i < csnet->thread_count; i++) {
 		csnet_el_free(csnet->el_list[i]);
 	}
-	free(csnet->el_list);
-	cs_lfqueue_free(csnet->q);
 	free(csnet);
 }
 

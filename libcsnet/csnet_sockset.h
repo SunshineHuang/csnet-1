@@ -7,7 +7,7 @@ typedef struct csnet_sockset {
 	int max_conn;
 	unsigned int start_sid;
 	unsigned int curr_sid;
-	csnet_sock_t** set;
+	csnet_sock_t* set[0];
 } csnet_sockset_t;
 
 csnet_sockset_t* csnet_sockset_new(int max_conn, unsigned int start_sid);

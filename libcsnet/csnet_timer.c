@@ -9,7 +9,7 @@ static unsigned long gettime();
 
 csnet_timer_t*
 csnet_timer_new(int interval, int wheel_count) {
-	csnet_timer_t* timer = (csnet_timer_t*)calloc(1, sizeof(*timer));
+	csnet_timer_t* timer = (csnet_timer_t*)calloc(1, sizeof(*timer) + (interval + 1) * sizeof(hashtable_t*));
 	if (!timer) {
 		csnet_oom(sizeof(*timer));
 	}
@@ -19,8 +19,6 @@ csnet_timer_new(int interval, int wheel_count) {
 	timer->curr_wheel = 0;
 	timer->curr_time = gettime();
 	timer->which_wheel_tbl = ht_create(wheel_count, wheel_count * 2, NULL);
-	timer->wheels_tbl = (hashtable_t**)calloc(interval + 1, sizeof(hashtable_t*));
-
 	for (int i = 0; i < interval + 1; i++) {
 		timer->wheels_tbl[i] = ht_create(wheel_count, wheel_count * 2, NULL);
 	}
@@ -34,8 +32,6 @@ csnet_timer_free(csnet_timer_t* timer) {
 	for (int i = 0; i < timer->interval + 1; i++) {
 		ht_destroy(timer->wheels_tbl[i]);
 	}
-
-	free(timer->wheels_tbl);
 	free(timer);
 }
 
