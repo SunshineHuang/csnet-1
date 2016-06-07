@@ -27,7 +27,7 @@ cs_pqueue_free(cs_pqueue_t* q) {
 }
 
 int
-cs_pqueue_push(cs_pqueue_t* q, int priority, int value) {
+cs_pqueue_push(cs_pqueue_t* q, int priority, char* value) {
 	cs_pqnode_t* new_node = calloc(1, sizeof(*new_node));
 	new_node->priority = priority;
 	new_node->value = value;
@@ -166,6 +166,7 @@ _pqueue_free(cs_pqnode_t* node) {
 	if (node) {
 		_pqueue_free(node->left);
 		_pqueue_free(node->right);
+		free(node->value);
 		free(node);
 	}
 }

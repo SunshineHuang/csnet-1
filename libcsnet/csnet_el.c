@@ -116,6 +116,7 @@ csnet_el_in_loop(void* arg) {
 						}
 
 						if (head->cmd != CSNET_HEARTBEAT_SYN) {
+							csnet_module_ref_increment(el->module);
 							csnet_module_entry(el->module, sock, head, data + HEAD_LEN,
 									head->len - HEAD_LEN);
 						} else {

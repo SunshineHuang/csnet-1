@@ -43,7 +43,7 @@ business_init(csnet_conntor_t* conntor, csnet_log_t* log, csnet_ctx_t* ctx, cs_l
 
 void
 business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
-	LOG_INFO(LOG, "cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
+	LOG_INFO(LOG, "business_entry cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
 		head->cmd, head->len, head->ctxid, data_len);
 
 	if (head->cmd == csnet_echo_msg_req) {

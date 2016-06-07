@@ -11,7 +11,7 @@ typedef struct cs_pqueue cs_pqueue_t;
 
 struct cs_pqnode {
 	int priority;
-	int value;
+	char* value;
 	cs_pqnode_t* parent;
 	cs_pqnode_t* left;
 	cs_pqnode_t* right;
@@ -26,7 +26,7 @@ struct cs_pqueue {
 
 cs_pqueue_t* cs_pqueue_new(cs_pqueue_mode_t mode);
 void cs_pqueue_free(cs_pqueue_t*);
-int cs_pqueue_push(cs_pqueue_t*, int priority, int value);
+int cs_pqueue_push(cs_pqueue_t*, int priority, char* value);
 
 /* Pop the highest priority node */
 cs_pqnode_t* cs_pqueue_pop(cs_pqueue_t*);

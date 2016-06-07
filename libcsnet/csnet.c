@@ -60,6 +60,13 @@ csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_l
 }
 
 void
+csnet_reset_module(csnet_t* csnet, csnet_module_t* module) {
+	for (int i = 0; i < csnet->thread_count; i++) {
+		csnet->el_list[i]->module = module;
+	}
+}
+
+void
 csnet_loop(csnet_t* csnet, int timeout) {
 	for (int i = 0; i < csnet->thread_count; i++) {
 		int cpuid;

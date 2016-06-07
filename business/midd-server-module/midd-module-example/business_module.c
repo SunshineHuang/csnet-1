@@ -26,7 +26,7 @@ business_init(csnet_conntor_t* conntor, csnet_log_t* log, csnet_ctx_t* ctx, cs_l
 	LOG = log;
 	CTX = ctx;
 	Q = q;
-	LOG_INFO(LOG, "business init done ...");
+	LOG_INFO(log, "business init done ...");
 	return 0;
 }
 
@@ -39,6 +39,7 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len)
 		struct bmin_send_msg* bm = bmin_send_msg_new(sock, head);
 		if (!bm) {
 			LOG_ERROR(LOG, "could not create bmin_send_msg");
+			csnet_module_ref_decrement(CONNTOR->module);
 			return;
 		}
 		int64_t ctxid = bm->ctxid;
@@ -49,11 +50,13 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len)
 				csnet_ctx_delete(CTX, ctxid);
 				bmin_send_msg_err(bm, sock, head);
 				bmin_send_msg_free(bm);
+				csnet_module_ref_decrement(CONNTOR->module);
 			}
 		} else {
 			LOG_ERROR(LOG, "could not insert to CTX, ctxid: %ld", ctxid);
 			bmin_send_msg_err(bm, sock, head);
 			bmin_send_msg_free(bm);
+			csnet_module_ref_decrement(CONNTOR->module);
 		}
 		return;
 	}
@@ -62,12 +65,14 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len)
 		struct bmin_send_msg* bm = csnet_ctx_search(CTX, head->ctxid);
 		if (!bm) {
 			LOG_ERROR(LOG, "could not find bm by ctxid: %ld", head->ctxid);
+			csnet_module_ref_decrement(CONNTOR->module);
 			return;
 		}
 		int ret = bm->ops.rsp(bm, head, data, data_len);
 		if (ret == 0) {
 			csnet_ctx_delete(CTX, head->ctxid);
 		}
+		csnet_module_ref_decrement(CONNTOR->module);
 		bmin_send_msg_free(bm);
 		return;
 	}

@@ -27,6 +27,7 @@
 #include "csnet_timer.h"
 #include "csnet_unpack.h"
 #include "csnet_utils.h"
+#include "csnet_hotpatch.h"
 #include "cs-priority-queue.h"
 #include "cs-queue.h"
 #include "cs-rbtree.h"

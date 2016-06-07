@@ -27,6 +27,7 @@ typedef struct csnet_conntor {
 csnet_conntor_t* csnet_conntor_new(int connect_timeout, const char* config,
 	csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q);
 void csnet_conntor_free(csnet_conntor_t*);
+void csnet_conntor_reset_module(csnet_conntor_t*, csnet_module_t* module);
 void csnet_conntor_connect_servers(csnet_conntor_t*);
 void csnet_conntor_reconnect_servers(csnet_conntor_t*);
 void csnet_conntor_loop(csnet_conntor_t*);

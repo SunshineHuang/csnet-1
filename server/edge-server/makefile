@@ -7,6 +7,7 @@ ifeq ($(jemalloc), -DJEMALLOC)
     LIBS += -ljemalloc
 endif
 CFLAGS += -rdynamic
+LIBS += -lssl -lcrypto
 
 obj_dir = .objs
 local_srcs = $(wildcard *.c)

@@ -130,6 +130,7 @@ _conntor_thread(void* arg) {
 						}
 
 						if (head->cmd != CSNET_HEARTBEAT_ACK) {
+							csnet_module_ref_increment(conntor->module);
 							csnet_module_entry(conntor->module, sock, head, data + HEAD_LEN,
 									head->len - HEAD_LEN);
 						} else {
@@ -294,6 +295,11 @@ csnet_conntor_free(csnet_conntor_t* conntor) {
 	csnet_sockset_free(conntor->sockset);
 	csnet_timer_free(conntor->timer);
 	free(conntor);
+}
+
+void
+csnet_conntor_reset_module(csnet_conntor_t* conntor, csnet_module_t* module) {
+	conntor->module = module;
 }
 
 void

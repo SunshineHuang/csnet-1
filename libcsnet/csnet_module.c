@@ -12,6 +12,7 @@ csnet_module_new() {
 	if (!m) {
 		csnet_oom(sizeof(*m));
 	}
+	m->ref_count = 0;
 	return m;
 }
 
@@ -39,8 +40,19 @@ csnet_module_load(csnet_module_t* m, const char* module) {
 	if (!m->business_entry) {
 		LOG_FATAL(m->log, "%s", dlerror());
 	}
-
+	csnet_md5sum(module, m->md5);
+	m->md5[16] = '\0';
 	m->business_init(m->conntor, m->log, m->ctx, m->q);
+}
+
+void
+csnet_module_ref_increment(csnet_module_t* m) {
+	__sync_fetch_and_add(&m->ref_count, 1);
+}
+
+void
+csnet_module_ref_decrement(csnet_module_t* m) {
+	__sync_fetch_and_add(&m->ref_count, -1);
 }
 
 void

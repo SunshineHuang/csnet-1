@@ -49,11 +49,12 @@ int main(int argc, char** argv)
 	char* business_timeout;
 
 	csnet_config_t* config;
-	csnet_log_t* log;
-	csnet_t* csnet;
-	cs_lfqueue_t* q;
 	csnet_module_t* module;
+	cs_lfqueue_t* q;
+	csnet_log_t* logger;
 	csnet_ctx_t* ctx;
+	csnet_t* csnet;
+	csnet_hotpatch_t* hotpatch;
 
 	config = csnet_config_new();
 	csnet_config_load(config, argv[1]);
@@ -83,8 +84,8 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	log = csnet_log_new(logfile, atoi(loglevel), atoi(logsize) * 1024 * 1024);
-	if (!log) {
+	logger = csnet_log_new(logfile, atoi(loglevel), atoi(logsize) * 1024 * 1024);
+	if (!logger) {
 		fprintf(stderr, "can not open logfile\n");
 		fflush(stderr);
 		csnet_config_free(config);
@@ -97,38 +98,41 @@ int main(int argc, char** argv)
 	server_connect_timeout = csnet_config_find(config, "server_connect_timeout", strlen("server_connect_timeout"));
 	business_timeout = csnet_config_find(config, "business_timeout", strlen("business_timeout"));
 	if (!port) {
-		LOG_FATAL(log, "could not find `port`!");
+		LOG_FATAL(logger, "could not find `port`!");
 	}
 
 	if (!maxconn) {
-		LOG_FATAL(log, "could not find `maxconn`!");
+		LOG_FATAL(logger, "could not find `maxconn`!");
 	}
 
 	if (!threadcount) {
-		LOG_FATAL(log, "could not find `threadcount`!");
+		LOG_FATAL(logger, "could not find `threadcount`!");
 	}
 
 	if (!server_connect_timeout) {
-		LOG_FATAL(log, "could not find `server_connect_timeout`!");
+		LOG_FATAL(logger, "could not find `server_connect_timeout`!");
 	}
 	if (!business_timeout) {
-		LOG_FATAL(log, "could not find `business_timeout`!");
+		LOG_FATAL(logger, "could not find `business_timeout`!");
 	}
 
 	q = cs_lfqueue_new();
 	ctx = csnet_ctx_new(CTX_SIZE, atoi(business_timeout), q);
 	module = csnet_module_new();
-	csnet_module_init(module, NULL, log, ctx, q);
+	csnet_module_init(module, NULL, logger, ctx, q);
 	csnet_module_load(module, "./business_module.so");
-	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), log, module, q);
+	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), logger, module, q);
+	hotpatch = csnet_hotpatch_new(q, csnet, logger, ctx, NULL, module);
+	LOG_INFO(logger, "Server start ok ...");
 	csnet_loop(csnet, -1);
 
 	cs_lfqueue_free(q);
 	csnet_free(csnet);
 	csnet_config_free(config);
-	csnet_log_free(log);
+	csnet_log_free(logger);
 	csnet_module_free(module);
 	csnet_ctx_free(ctx);
+	csnet_hotpatch_free(hotpatch);
 
         return 0;
 }

@@ -5,6 +5,27 @@
 #include <string.h>
 #include <unistd.h>
 #include <sched.h>
+#include <openssl/md5.h>
+
+int
+csnet_md5sum(const char* path, unsigned char* buff) {
+	FILE* file = fopen(path, "rb");
+	if (!file) {
+		return -1;
+	}
+
+	MD5_CTX md5_ctx;
+	int bytes;
+	unsigned char data[1024];
+
+	MD5_Init(&md5_ctx);
+	while ((bytes = fread(data, 1, 1024, file)) != 0) {
+		MD5_Update(&md5_ctx, data, bytes);
+	}
+	MD5_Final(buff, &md5_ctx);
+	fclose(file);
+	return 0;
+}
 
 char*
 csnet_trim(char* name) {
