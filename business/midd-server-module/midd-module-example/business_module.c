@@ -10,8 +10,6 @@
 #include <string.h>
 #include <pthread.h>
 
-#define CTX_SIZE 0x100000
-
 /*
  * These variables define at main.c
  */

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <string.h>
 #include <assert.h>
 #include <dirent.h>
 #include <sys/types.h>
@@ -112,29 +113,23 @@ out:
 	return ret;
 }
 
-/*
- * This hotpatching() was obtained from http://nullprogram.com/blog/2016/03/31/
- */
 static int
 hotpatching(void* target, void* replacement) {
+	int ret;
 	assert(((uintptr_t)target & 0x07) == 0);
+	void* page = (void *)((uintptr_t)target & ~0xfff);  /* clear lowest 4096 of target */
+	ret = mprotect(page, 4096, PROT_WRITE | PROT_EXEC);  /* protect the memory[target, target + 4096] */
 
-	/* protect the page where target in */
-	void* page = (void *)((uintptr_t)target & ~0xfff);
-	if (mprotect(page, 4096, PROT_WRITE | PROT_EXEC) == -1) {
+	if (ret == -1) {
 		return -1;
 	}
 
-	/* compute the relative jump.
-	 * 0xe9 is JMP rel32 opcode
-	 * 5 is the JMP instruction wide */
 	uint32_t rel = (char *)replacement - (char *)target - 5;
 	union {
 		uint8_t bytes[8];
 		uint64_t value;
 	} instruction = {{0xe9, rel >> 0, rel >> 8, rel >> 16, rel >> 24}};
 
-	/* a single, atomic, 64-bit store. Other threads will see either the NOP or JMP */
 	*(uint64_t *)target = instruction.value;
 	mprotect(page, 4096, PROT_EXEC);
 

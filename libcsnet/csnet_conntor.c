@@ -5,7 +5,6 @@
 #include "csnet_utils.h"
 #include "csnet_log.h"
 #include "csnet_msg.h"
-#include "hlhashtable.h"
 
 #include <unistd.h>
 #include <stdio.h>
@@ -45,34 +44,30 @@ static inline void
 _heartbeat(csnet_conntor_t* conntor) {
 	int expired_wheel = csnet_timer_book_keeping(conntor->timer);
 	if (expired_wheel > -1) {
-		hashtable_t* hashtable = conntor->timer->wheels_tbl[expired_wheel];
-		linked_list_t* keys = ht_get_all_keys(hashtable);
-		int count = list_count(keys);
+		cs_lfhash_t* hashtable = conntor->timer->wheels_tbl[expired_wheel];
+		cs_lflist_t* keys = cs_lfhash_get_all_keys(hashtable);
+		cs_lflist_node_t* head = keys->head->next;
+		while (head != keys->tail) {
+			unsigned int sid = head->key;
+			LOG_INFO(conntor->log, "sid[%d] timeout, heartbeating", sid);
 
-		for (int i = 0; i < count; i++) {
-			hashtable_key_t* key = list_pick_value(keys, i);
-			if (key) {
-				unsigned int* sid = key->data;
-				LOG_INFO(conntor->log, "sid[%d] timeout, heartbeating", *sid);
+			csnet_head_t h = {
+				.version = 0x0,
+				.compress = 0,
+				.cmd = CSNET_HEARTBEAT_SYN,
+				.status = 0x0,
+				.ctxid = 0x0,
+				.sid = sid,
+				.len = HEAD_LEN
+			};
 
-				csnet_head_t h = {
-					.version = 0x0,
-					.compress = 0,
-					.cmd = CSNET_HEARTBEAT_SYN,
-					.status = 0x0,
-					.ctxid = 0x0,
-					.sid = *sid,
-					.len = HEAD_LEN
-				};
-
-				csnet_sock_t* sock = csnet_sockset_get(conntor->sockset, *sid);
-				csnet_msg_t* msg = csnet_msg_new(h.len, sock);
-				csnet_msg_append(msg, (char*)&h, h.len);
-				cs_lfqueue_enq(conntor->q, msg);
-			}
+			csnet_sock_t* sock = csnet_sockset_get(conntor->sockset, sid);
+			csnet_msg_t* msg = csnet_msg_new(h.len, sock);
+			csnet_msg_append(msg, (char*)&h, h.len);
+			cs_lfqueue_enq(conntor->q, msg);
+			head = head->next;
 		}
-
-		list_destroy(keys);
+		cs_lflist_free(keys);
 	}
 }
 
@@ -112,10 +107,10 @@ _conntor_thread(void* arg) {
 							csnet_epoller_del(conntor->epoller, fd, sid);
 							csnet_sockset_reset_sock(conntor->sockset, sid);
 							csnet_timer_remove(conntor->timer, sid);
-							struct server_node* server_node = ht_get(conntor->hashtbl, &sid, sizeof(unsigned int), NULL);
+							struct server_node* server_node = cs_lfhash_search(conntor->hashtbl, sid);
 
 							if (server_node) {
-								ht_delete(conntor->hashtbl, &sid, sizeof(unsigned int), NULL, NULL);
+								cs_lfhash_delete(conntor->hashtbl, sid);
 								for (int j = 0; j < 4; j++) {
 									if (server_node->sids[j] == sid) {
 										server_node->sids[j] = 0;
@@ -149,10 +144,10 @@ _conntor_thread(void* arg) {
 					csnet_epoller_del(conntor->epoller, fd, sid);
 					csnet_sockset_reset_sock(conntor->sockset, sid);
 					csnet_timer_remove(conntor->timer, sid);
-					struct server_node* server_node = ht_get(conntor->hashtbl, &sid, sizeof(unsigned int), NULL);
+					struct server_node* server_node = cs_lfhash_search(conntor->hashtbl, sid);
 
 					if (server_node) {
-						ht_delete(conntor->hashtbl, &sid, sizeof(unsigned int), NULL, NULL);
+						cs_lfhash_delete(conntor->hashtbl, sid);
 						for (int j = 0; j < 4; j++) {
 							if (server_node->sids[j] == sid) {
 								server_node->sids[j] = 0;
@@ -271,7 +266,7 @@ csnet_conntor_new(int connect_timeout, const char* config, csnet_log_t* log, csn
 		conntor->slots[i]->list = cs_dlist_new();
 	}
 
-	conntor->hashtbl = ht_create(71, 71, NULL);
+	conntor->hashtbl = cs_lfhash_new(71);
 	conntor->log = log;
 	_load_nodes(conntor, config);
 	conntor->sockset = csnet_sockset_new(1024, 0x0);
@@ -291,7 +286,7 @@ csnet_conntor_free(csnet_conntor_t* conntor) {
 	}
 
 	free(conntor->slots);
-	ht_destroy(conntor->hashtbl);
+	cs_lfhash_free(conntor->hashtbl);
 	csnet_sockset_free(conntor->sockset);
 	csnet_timer_free(conntor->timer);
 	free(conntor);
@@ -316,7 +311,7 @@ csnet_conntor_connect_servers(csnet_conntor_t* conntor) {
 					set_nonblocking(fd);
 					server_node->sids[i] = csnet_sockset_put(conntor->sockset, fd);
 					csnet_epoller_add(conntor->epoller, fd, server_node->sids[i]);
-					ht_set(conntor->hashtbl, &server_node->sids[i], sizeof(unsigned int), server_node, sizeof(*server_node));
+					cs_lfhash_insert(conntor->hashtbl, server_node->sids[i], server_node);
 					csnet_timer_insert(conntor->timer, fd, server_node->sids[i]);
 					LOG_INFO(conntor->log, "connected to [%s:%d] with socket: %d, sid: %d",
 						  server_node->ip, server_node->port, fd, server_node->sids[i]);
@@ -343,7 +338,7 @@ csnet_conntor_reconnect_servers(csnet_conntor_t* conntor) {
 						set_nonblocking(fd);
 						server_node->sids[i] = csnet_sockset_put(conntor->sockset, fd);
 						csnet_epoller_add(conntor->epoller, fd, server_node->sids[i]);
-						ht_set(conntor->hashtbl, &server_node->sids[i], sizeof(unsigned int), server_node, sizeof(*server_node));
+						cs_lfhash_insert(conntor->hashtbl, server_node->sids[i], server_node);
 						csnet_timer_insert(conntor->timer, fd, server_node->sids[i]);
 						LOG_INFO(conntor->log, "re-connected to [%s:%d] with sockect: %d, sid: %d",
 							  server_node->ip, server_node->port, fd, server_node->sids[i]);

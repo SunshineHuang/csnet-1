@@ -3,13 +3,10 @@
 #include "csnet_utils.h"
 
 #include <stdlib.h>
-#include <sys/time.h>
-
-static unsigned long gettime();
 
 csnet_timer_t*
 csnet_timer_new(int interval, int wheel_count) {
-	csnet_timer_t* timer = (csnet_timer_t*)calloc(1, sizeof(*timer) + (interval + 1) * sizeof(hashtable_t*));
+	csnet_timer_t* timer = (csnet_timer_t*)calloc(1, sizeof(*timer) + (interval + 1) * sizeof(cs_lfhash_t*));
 	if (!timer) {
 		csnet_oom(sizeof(*timer));
 	}
@@ -17,10 +14,10 @@ csnet_timer_new(int interval, int wheel_count) {
 	timer->interval = interval;
 	timer->prev_wheel = interval;
 	timer->curr_wheel = 0;
-	timer->curr_time = gettime();
-	timer->which_wheel_tbl = ht_create(wheel_count, wheel_count * 2, NULL);
+	timer->curr_time = csnet_gettime();
+	timer->which_wheel_tbl = cs_lfhash_new(wheel_count * 2);
 	for (int i = 0; i < interval + 1; i++) {
-		timer->wheels_tbl[i] = ht_create(wheel_count, wheel_count * 2, NULL);
+		timer->wheels_tbl[i] = cs_lfhash_new(wheel_count);
 	}
 
 	return timer;
@@ -28,23 +25,22 @@ csnet_timer_new(int interval, int wheel_count) {
 
 void
 csnet_timer_free(csnet_timer_t* timer) {
-	ht_destroy(timer->which_wheel_tbl);
+	cs_lfhash_free(timer->which_wheel_tbl);
 	for (int i = 0; i < timer->interval + 1; i++) {
-		ht_destroy(timer->wheels_tbl[i]);
+		cs_lfhash_free(timer->wheels_tbl[i]);
 	}
 	free(timer);
 }
 
 int
 csnet_timer_insert(csnet_timer_t* timer, int fd, unsigned int sid) {
-	int key_size = sizeof(unsigned int);
 	int* which_wheel = calloc(1, sizeof(int));
 	if (!which_wheel) {
 		csnet_oom(sizeof(int));
 	}
 
 	*which_wheel = timer->prev_wheel;
-	if (ht_set(timer->which_wheel_tbl, &sid, key_size, which_wheel, sizeof(int*)) == -1) {
+	if (cs_lfhash_insert(timer->which_wheel_tbl, sid, which_wheel) == -1) {
 		free(which_wheel);
 		return -1;
 	}
@@ -58,8 +54,8 @@ csnet_timer_insert(csnet_timer_t* timer, int fd, unsigned int sid) {
 	node->timerid = sid;
 	node->interval = timer->interval;
 
-	if (ht_set(timer->wheels_tbl[*which_wheel], &sid, key_size, node, sizeof(csnet_timer_node_t)) == -1) {
-		ht_get(timer->which_wheel_tbl, &sid, key_size, NULL);
+	if (cs_lfhash_insert(timer->wheels_tbl[*which_wheel], sid, node) == -1) {
+		cs_lfhash_search(timer->which_wheel_tbl, sid);
 		free(node);
 		return -1;
 	}
@@ -69,26 +65,23 @@ csnet_timer_insert(csnet_timer_t* timer, int fd, unsigned int sid) {
 
 void
 csnet_timer_update(csnet_timer_t* timer, unsigned int timerid) {
-	int key_size = sizeof(unsigned int);
-	int* which_wheel = ht_get(timer->which_wheel_tbl, &timerid, key_size, NULL);
+	int* which_wheel = cs_lfhash_search(timer->which_wheel_tbl, timerid);
 	if ((!which_wheel) || (*which_wheel == timer->prev_wheel)) {
 		return;
 	}
 
-	size_t node_size = 0;
-	csnet_timer_node_t* timer_node = ht_get(timer->wheels_tbl[*which_wheel], &timerid, key_size, &node_size);
+	csnet_timer_node_t* timer_node = cs_lfhash_search(timer->wheels_tbl[*which_wheel], timerid);
 
 	if (timer_node) {
-		ht_delete(timer->wheels_tbl[*which_wheel], &timerid, key_size, NULL, NULL);
+		cs_lfhash_delete(timer->wheels_tbl[*which_wheel], timerid);
 		*which_wheel = timer->curr_wheel;
-		ht_set(timer->wheels_tbl[*which_wheel], &timerid, key_size, timer_node, node_size);
+		cs_lfhash_insert(timer->wheels_tbl[*which_wheel], timerid, timer_node);
 	}
 }
 
 void
 csnet_timer_remove(csnet_timer_t* timer, unsigned int timerid) {
-	int key_size = sizeof(unsigned int);
-	int* which_wheel = ht_get(timer->which_wheel_tbl, &timerid, sizeof(unsigned int), NULL);
+	int* which_wheel = cs_lfhash_search(timer->which_wheel_tbl, timerid);
 	if (!which_wheel) {
 		return;
 	}
@@ -96,10 +89,10 @@ csnet_timer_remove(csnet_timer_t* timer, unsigned int timerid) {
 	int index = *which_wheel;
 	free(which_wheel);
 
-	csnet_timer_node_t* timer_node = ht_get(timer->wheels_tbl[index], &timerid, key_size, NULL);
+	csnet_timer_node_t* timer_node = cs_lfhash_search(timer->wheels_tbl[index], timerid);
 	if (timer_node) {
-		ht_delete(timer->wheels_tbl[index], &timerid, key_size, NULL, NULL);
-		ht_delete(timer->which_wheel_tbl, &timerid, key_size, NULL, NULL);
+		cs_lfhash_delete(timer->wheels_tbl[index], timerid);
+		cs_lfhash_delete(timer->which_wheel_tbl, timerid);
 	}
 }
 
@@ -107,7 +100,7 @@ csnet_timer_remove(csnet_timer_t* timer, unsigned int timerid) {
  * other value means there is expired timers in this wheel */
 int
 csnet_timer_book_keeping(csnet_timer_t* timer) {
-	unsigned long now = gettime();
+	unsigned long now = csnet_gettime();
 	if (now - timer->curr_time < 1000000) {
 		return -1;
 	}
@@ -119,17 +112,10 @@ csnet_timer_book_keeping(csnet_timer_t* timer) {
 		timer->curr_wheel = 0;
 	}
 
-	if (ht_count(timer->wheels_tbl[timer->curr_wheel]) <= 0) {
+	if (cs_lfhash_count(timer->wheels_tbl[timer->curr_wheel]) <= 0) {
 		return -1;
 	}
 
 	return timer->curr_wheel;
-}
-
-static inline unsigned long
-gettime() {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 

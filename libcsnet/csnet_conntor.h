@@ -9,13 +9,13 @@
 #include "cs-doubly-linked-list.h"
 #include "csnet_epoller.h"
 #include "cs-lfqueue.h"
-#include "hlhashtable.h"
+#include "cs-lfhash.h"
 
 struct slot;
 
 typedef struct csnet_conntor {
 	struct slot** slots;
-	hashtable_t* hashtbl;
+	cs_lfhash_t* hashtbl;
 	csnet_epoller_t* epoller;
 	csnet_sockset_t* sockset;
 	csnet_timer_t* timer;

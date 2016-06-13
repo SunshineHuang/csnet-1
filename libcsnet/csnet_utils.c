@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sched.h>
+#include <sys/time.h>
 #include <openssl/md5.h>
 
 int
@@ -55,13 +56,13 @@ csnet_oom(unsigned int size) {
 	abort();
 }
 
-int
+inline int
 csnet_cpu_cores(void) {
 	int cores = sysconf(_SC_NPROCESSORS_ONLN);
 	return cores > 0 ? cores : 1;
 }
 
-int
+inline int
 csnet_bind_to_cpu(pthread_t tid, int cpuid) {
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
@@ -69,7 +70,7 @@ csnet_bind_to_cpu(pthread_t tid, int cpuid) {
 	return pthread_setaffinity_np(tid, sizeof(mask), &mask);
 }
 
-int
+inline int
 csnet_bound_cpuid(pthread_t tid) {
 	cpu_set_t mask;
 	CPU_ZERO(&mask);
@@ -81,5 +82,12 @@ csnet_bound_cpuid(pthread_t tid) {
 		}
 	}
 	return -1;
+}
+
+inline unsigned long
+csnet_gettime() {
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv.tv_sec * 1000000 + tv.tv_usec;
 }
 

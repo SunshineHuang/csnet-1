@@ -190,28 +190,24 @@ static inline void
 csnet_el_check_timeout(csnet_el_t* el) {
 	int expired_wheel = csnet_timer_book_keeping(el->timer);
 	if (expired_wheel > -1) {
-		hashtable_t* hashtbl = el->timer->wheels_tbl[expired_wheel];
-		linked_list_t* keys = ht_get_all_keys(hashtbl);
-		int count = list_count(keys);
+		cs_lfhash_t* hashtbl = el->timer->wheels_tbl[expired_wheel];
+		cs_lflist_t* keys = cs_lfhash_get_all_keys(hashtbl);
+		cs_lflist_node_t* head = keys->head->next;
+		while (head != keys->tail) {
+			/* We just close this connection simply here.
+			 * TODO: Shoud send a timeout package to this connection?
+			 * If we do this, what's the right timing to close this connection? */
 
-		for (int i = 0; i < count; i++) {
-			hashtable_key_t* key = list_pick_value(keys, i);
-			if (key) {
-				/* We just close this connection simply here.
-				 * TODO: Shoud send a timeout package to this connection?
-			 	 * If we do this, what's the right timing to close this connection? */
-
-				unsigned int* sid = key->data;
-				csnet_sock_t* sock = csnet_sockset_get(el->sockset, *sid);
-				LOG_WARNING(el->log, "sid[%d] timeout, closing socket[%d]", *sid, sock->fd);
-				csnet_epoller_del(el->epoller, sock->fd, *sid);
-				csnet_sockset_reset_sock(el->sockset, *sid);
-				el->cur_conn--;
-				csnet_timer_remove(el->timer, *sid);
-			}
+			unsigned int sid = head->key;
+			csnet_sock_t* sock = csnet_sockset_get(el->sockset, sid);
+			LOG_WARNING(el->log, "sid[%d] timeout, closing socket[%d]", sid, sock->fd);
+			csnet_epoller_del(el->epoller, sock->fd, sid);
+			csnet_sockset_reset_sock(el->sockset, sid);
+			el->cur_conn--;
+			csnet_timer_remove(el->timer, sid);
+			head = head->next;
 		}
-
-		list_destroy(keys);
+		cs_lflist_free(keys);
 	}
 }
 

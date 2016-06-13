@@ -2,6 +2,8 @@
 #define csnet_log_h
 
 #include <stdio.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #define LL_ERROR   0
 #define LL_WARNING 1
@@ -9,7 +11,7 @@
 #define LL_DEBUG   3
 
 #define DEBUG(fmt, args ...) do { \
-	fprintf(stderr, "[%s:%u:%s()] " fmt "\n", __FILE__, __LINE__, __FUNCTION__, ##args); \
+	fprintf(stderr, "[%s:%u:%s()] %ld " fmt "\n", __FILE__, __LINE__, __FUNCTION__, syscall(__NR_gettid), ##args); \
 	fflush(stderr); \
 } while (0)
 

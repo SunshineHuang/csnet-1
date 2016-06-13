@@ -1,7 +1,7 @@
 #ifndef csnet_timer_h
 #define csnet_timer_h
 
-#include "hlhashtable.h"
+#include "cs-lfhash.h"
 
 typedef struct csnet_timer_node {
 	int fd;
@@ -16,8 +16,8 @@ typedef struct csnet_timer {
 	int prev_wheel;
 	int curr_wheel;
 	unsigned long curr_time;
-	hashtable_t* which_wheel_tbl;
-	hashtable_t* wheels_tbl[0];
+	cs_lfhash_t* which_wheel_tbl;
+	cs_lfhash_t* wheels_tbl[0];
 } csnet_timer_t;
 
 csnet_timer_t* csnet_timer_new(int interval, int wheel_count);
