@@ -1,5 +1,4 @@
-#ifndef csnet_pack_h
-#define csnet_pack_h
+#pragma once
 
 #define MAX_PACK_LEN 32 * 1024
 
@@ -33,6 +32,4 @@ void csnet_pack_reserve_long(csnet_pack_t*);
 void csnet_pack_fill_short(csnet_pack_t*, short s);
 void csnet_pack_fill_int(csnet_pack_t*, int i);
 void csnet_pack_fill_long(csnet_pack_t*, long l);
-
-#endif  /* csnet_pack_h */
 

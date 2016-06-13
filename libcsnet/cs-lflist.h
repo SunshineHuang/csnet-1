@@ -1,5 +1,4 @@
-#ifndef cs_lflist_h
-#define cs_lflist_h
+#pragma once
 
 #include <stdint.h>
 
@@ -25,6 +24,4 @@ void cs_lflist_free(cs_lflist_t*);
 int cs_lflist_insert(cs_lflist_t*, int64_t key, void* data);
 int cs_lflist_delete(cs_lflist_t*, int64_t key);
 cs_lflist_node_t* cs_lflist_search(cs_lflist_t*, int64_t key);
-
-#endif  /* cs_lflist_h */
 

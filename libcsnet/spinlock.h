@@ -1,5 +1,4 @@
-#ifndef spinlock_h
-#define spinlock_h
+#pragma once
 
 typedef int spinlock_t;
 
@@ -22,6 +21,4 @@ static inline void
 spinlock_unlock(spinlock_t* lock) {
 	__sync_lock_release(lock);
 }
-
-#endif  /* spinlock_h */
 

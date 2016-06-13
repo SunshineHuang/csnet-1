@@ -1,5 +1,4 @@
-#ifndef csnet_conntor_h
-#define csnet_conntor_h
+#pragma once
 
 #include "csnet_log.h"
 #include "csnet_timer.h"
@@ -32,6 +31,4 @@ void csnet_conntor_connect_servers(csnet_conntor_t*);
 void csnet_conntor_reconnect_servers(csnet_conntor_t*);
 void csnet_conntor_loop(csnet_conntor_t*);
 csnet_sock_t* csnet_conntor_get_sock(csnet_conntor_t*, csnet_server_type_t server_type);
-
-#endif  /* csnet_conntor_h */
 

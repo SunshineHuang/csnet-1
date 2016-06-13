@@ -1,5 +1,4 @@
-#ifndef csnet_hotpatch_h
-#define csnet_hotpatch_h
+#pragma once
 
 #include "csnet.h"
 #include "csnet_log.h"
@@ -21,4 +20,3 @@ csnet_hotpatch_t* csnet_hotpatch_new(cs_lfqueue_t*, csnet_t*, csnet_log_t*, csne
 void csnet_hotpatch_free(csnet_hotpatch_t*);
 int csnet_hotpatch_do_patching(csnet_hotpatch_t*);
 
-#endif  /* csnet_hotpatch_h */

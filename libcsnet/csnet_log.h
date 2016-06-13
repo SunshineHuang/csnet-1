@@ -1,5 +1,4 @@
-#ifndef csnet_log_h
-#define csnet_log_h
+#pragma once
 
 #include <stdio.h>
 #include <unistd.h>
@@ -41,6 +40,4 @@ csnet_log_t* csnet_log_new(const char* logname, int level, long rotate_size);
 void csnet_log_log(csnet_log_t*, int level, const char* filename, int lineno, const char* fmt, ...);
 void csnet_log_fatal(csnet_log_t*, const char* filename, int lineno, const char* fmt, ...);
 void csnet_log_free(csnet_log_t*);
-
-#endif  /* csnet_log_h */
 

@@ -1,5 +1,4 @@
-#ifndef cs_lfhash_h
-#define cs_lfhash_h
+#pragma once
 
 #include "cs-lflist.h"
 #include "spinlock.h"
@@ -24,6 +23,4 @@ void* cs_lfhash_search(cs_lfhash_t*, int64_t key);
 int cs_lfhash_delete(cs_lfhash_t*, int64_t key);
 unsigned long cs_lfhash_count(cs_lfhash_t*);
 cs_lflist_t* cs_lfhash_get_all_keys(cs_lfhash_t*);
-
-#endif  /* cs_lfhash_h */
 

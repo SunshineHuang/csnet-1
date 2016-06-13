@@ -1,5 +1,4 @@
-#ifndef csnet_epoller_h
-#define csnet_epoller_h
+#pragma once
 
 #include <stdbool.h>
 #include <sys/epoll.h>
@@ -28,6 +27,4 @@ bool csnet_epoller_event_is_writeable(csnet_epoller_event_t* event);
 bool csnet_epoller_event_is_error(csnet_epoller_event_t* event);
 int csnet_epoller_event_fd(csnet_epoller_event_t* event);
 unsigned int csnet_epoller_event_sid(csnet_epoller_event_t* event);
-
-#endif  /* csnet_epoller_h */
 

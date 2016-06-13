@@ -1,5 +1,4 @@
-#ifndef cs_singly_linked_list_h
-#define cs_singly_linked_list_h
+#pragma once
 
 typedef struct cs_sl_node cs_sl_node_t;
 typedef struct cs_slist cs_slist_t;
@@ -24,6 +23,4 @@ void cs_slist_insert(cs_slist_t*, cs_sl_node_t* x);
 void cs_slist_remove(cs_slist_t*, cs_sl_node_t* x);
 void cs_slist_reverse(cs_slist_t*);
 void cs_slist_print(const cs_slist_t*);
-
-#endif  /* cs_singly_linked_list_h */
 

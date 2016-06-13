@@ -1,5 +1,4 @@
-#ifndef csnet_el_h
-#define csnet_el_h
+#pragma once
 
 #include "cs-lfqueue.h"
 #include "csnet_log.h"
@@ -24,6 +23,4 @@ void csnet_el_free(csnet_el_t*);
 int csnet_el_add_connection(csnet_el_t*, int fd);
 void* csnet_el_in_loop(void* arg);
 void* csnet_el_out_loop(void* arg);
-
-#endif  /* csnet_el_h */
 

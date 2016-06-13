@@ -1,5 +1,4 @@
-#ifndef csnet_sockset_h
-#define csnet_sockset_h
+#pragma once
 
 #include "csnet_sock.h"
 
@@ -15,6 +14,4 @@ void csnet_sockset_free(csnet_sockset_t*);
 unsigned int csnet_sockset_put(csnet_sockset_t*, int fd);
 csnet_sock_t* csnet_sockset_get(csnet_sockset_t*, unsigned int sid);
 void csnet_sockset_reset_sock(csnet_sockset_t*, unsigned int fd);
-
-#endif  /* csnet_sockset_h */
 

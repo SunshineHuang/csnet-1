@@ -1,5 +1,4 @@
-#ifndef csnet_ctx_h
-#define csnet_ctx_h
+#pragma once
 
 #include "cs-lfhash.h"
 #include "csnet_ctx.h"
@@ -29,6 +28,4 @@ void csnet_ctx_update(csnet_ctx_t*, int64_t ctxid);
 void* csnet_ctx_search(csnet_ctx_t*, int64_t ctxid);
 void csnet_ctx_delete(csnet_ctx_t*, int64_t ctxid);
 int csnet_ctx_book_keeping(csnet_ctx_t*);
-
-#endif  /* csnet_ctx_h */
 

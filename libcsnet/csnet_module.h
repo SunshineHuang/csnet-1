@@ -1,5 +1,4 @@
-#ifndef csnet_module_h
-#define csnet_module_h
+#pragma once
 
 #include "cs-lfqueue.h"
 #include "csnet_sock.h"
@@ -30,6 +29,4 @@ void csnet_module_ref_increment(csnet_module_t*);
 void csnet_module_ref_decrement(csnet_module_t*);
 void csnet_module_entry(csnet_module_t*, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len);
 void csnet_module_free(csnet_module_t*);
-
-#endif  /* csnet_module_h */
 

@@ -1,5 +1,4 @@
-#ifndef csnet_unpack_h
-#define csnet_unpack_h
+#pragma once
 
 #define UNPACK_NOERR 0
 #define UNPACK_ERROR 1
@@ -23,6 +22,4 @@ unsigned long csnet_unpack_getul(csnet_unpack_t*);
 unsigned long long csnet_unpack_getull(csnet_unpack_t*);
 float csnet_unpack_getf(csnet_unpack_t*);
 const char* csnet_unpack_getstr(csnet_unpack_t*);
-
-#endif  /* csnet_unpack_h */
 

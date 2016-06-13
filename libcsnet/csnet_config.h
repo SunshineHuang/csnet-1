@@ -1,5 +1,4 @@
-#ifndef csnet_config_h
-#define csnet_config_h
+#pragma once
 
 #include "cs-hashtable.h"
 
@@ -11,6 +10,4 @@ csnet_config_t* csnet_config_new();
 void csnet_config_free(csnet_config_t*);
 void csnet_config_load(csnet_config_t*, const char* file);
 void* csnet_config_find(csnet_config_t*, void* key, int key_len);
-
-#endif  /* csnet_config_h */
 

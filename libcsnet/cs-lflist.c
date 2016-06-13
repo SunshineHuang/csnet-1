@@ -7,17 +7,17 @@
 
 #define cas __sync_bool_compare_and_swap
 
-int 
+int inline
 is_marked_reference(intptr_t p) {
 	return (int) (p & 0x1L);
 }
 
-intptr_t
+intptr_t inline
 get_marked_reference(intptr_t p) {
 	return p | 0x1L;
 }
 
-intptr_t
+intptr_t inline
 get_unmarked_reference(intptr_t p) {
 	return p & ~0x1L;
 }

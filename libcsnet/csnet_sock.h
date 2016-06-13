@@ -1,5 +1,4 @@
-#ifndef csnet_sock_h
-#define csnet_sock_h 
+#pragma once
 
 #include "csnet_rb.h"
 
@@ -13,6 +12,4 @@ csnet_sock_t* csnet_sock_new(int rb_size);
 void csnet_sock_free(csnet_sock_t*);
 int csnet_sock_recv(csnet_sock_t*);
 int csnet_sock_send(csnet_sock_t*, char* buff, int len);
-
-#endif  /* csnet_sock_h */
 

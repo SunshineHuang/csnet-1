@@ -1,5 +1,4 @@
-#ifndef cs_lfqueue_h
-#define cs_lfqueue_h
+#pragma once
 
 /*
  * Lock-free queue based hazard pointers
@@ -40,6 +39,4 @@ void cs_lfqueue_free(cs_lfqueue_t*);
 void cs_lfqueue_register_thread(cs_lfqueue_t*);
 int cs_lfqueue_enq(cs_lfqueue_t*, void* data);
 int cs_lfqueue_deq(cs_lfqueue_t*, void** data);
-
-#endif  /* cs_lfqueue_h */
 

@@ -1,5 +1,4 @@
-#ifndef cs_priority_queue_h
-#define cs_priority_queue_h
+#pragma once
 
 typedef enum {
 	CS_PQ_LOWEST_PRIORITY,  /* lowest key have highest priorit */
@@ -32,6 +31,4 @@ int cs_pqueue_push(cs_pqueue_t*, int priority, char* value);
 cs_pqnode_t* cs_pqueue_pop(cs_pqueue_t*);
 void cs_pqueue_delete(cs_pqueue_t*, cs_pqnode_t* node);
 void cs_pqueue_inorder_walk(cs_pqueue_t*);
-
-#endif  /* cs_priority_queue_h */
 

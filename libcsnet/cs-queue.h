@@ -1,5 +1,4 @@
-#ifndef cs_queue_h
-#define cs_queue_h
+#pragma once
 
 typedef struct cs_queue_node cs_queue_node_t;
 typedef struct cs_queue cs_queue_t;
@@ -21,6 +20,4 @@ cs_queue_t* cs_queue_new();
 void cs_queue_free(cs_queue_t*);
 void cs_queue_enq(cs_queue_t*, cs_queue_node_t* node);
 cs_queue_node_t* cs_queue_deq(cs_queue_t*);
-
-#endif  /* cs_queue_h */
 

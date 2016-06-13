@@ -1,5 +1,4 @@
-#ifndef csnet_h
-#define csnet_h
+#pragma once
 
 #include "cs-lfqueue.h"
 #include "csnet_el.h"
@@ -22,6 +21,4 @@ csnet_t* csnet_new(int port, int thread_count, int max_conn, int connect_timeout
 void csnet_reset_module(csnet_t*, csnet_module_t* module);
 void csnet_loop(csnet_t*, int timeout);
 void csnet_free(csnet_t*);
-
-#endif  /* csnet_h */
 

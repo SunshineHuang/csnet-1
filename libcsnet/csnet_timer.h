@@ -1,5 +1,4 @@
-#ifndef csnet_timer_h
-#define csnet_timer_h
+#pragma once
 
 #include "cs-lfhash.h"
 
@@ -29,6 +28,4 @@ void csnet_timer_update(csnet_timer_t*, unsigned int timerid);
 /* Return -1 means there is no expired timer,
  * other value means there is expired timer in this wheel */
 int csnet_timer_book_keeping(csnet_timer_t*);
-
-#endif  /* csnet_timer_h */
 

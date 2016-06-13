@@ -1,5 +1,4 @@
-#ifndef csnet_head_h
-#define csnet_head_h
+#pragma once
 
 #include <stdint.h>
 
@@ -22,6 +21,4 @@ typedef struct csnet_head {
 } csnet_head_t;
 
 #pragma pack(pop)
-
-#endif  /* csnet_head_h */
 

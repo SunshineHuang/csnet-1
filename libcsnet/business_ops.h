@@ -1,5 +1,4 @@
-#ifndef business_ops_h
-#define business_ops_h
+#pragma once
 
 #include "csnet_head.h"
 #include "csnet_sock.h"
@@ -15,6 +14,4 @@ typedef struct business_ops {
 	err_cb err;
 	timeout_cb timeout;
 } business_ops_t;
-
-#endif  /* business_ops_h */
 

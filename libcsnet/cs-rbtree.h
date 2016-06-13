@@ -1,5 +1,4 @@
-#ifndef cs_rbtree_h
-#define cs_rbtree_h
+#pragma once
 
 typedef struct cs_rbnode cs_rbnode_t;
 typedef struct cs_rbtree cs_rbtree_t;
@@ -26,6 +25,4 @@ void cs_rbtree_insert(cs_rbtree_t*, cs_rbnode_t* z);
 void cs_rbtree_delete(cs_rbtree_t*, cs_rbnode_t* z);
 cs_rbnode_t* cs_rbtree_search(cs_rbtree_t*, int key);
 void cs_rbtree_inorder_walk(cs_rbtree_t*);
-
-#endif  /* cs_rbtree_h */
 

@@ -1,5 +1,4 @@
-#ifndef csnet_rb_h
-#define csnet_rb_h
+#pragma once
 
 typedef struct csnet_rb {
 	int capacity;
@@ -15,6 +14,4 @@ int csnet_rb_seek(csnet_rb_t*, int len);
 void csnet_rb_reset(csnet_rb_t*);
 char* csnet_rb_data(csnet_rb_t*);
 int csnet_rb_data_len(csnet_rb_t*);
-
-#endif  /* csnet_rb_h */
 

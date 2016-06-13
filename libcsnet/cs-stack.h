@@ -1,5 +1,4 @@
-#ifndef cs_stack_h
-#define cs_stack_h
+#pragma once
 
 typedef struct cs_stack_node cs_stack_node_t;
 typedef struct cs_stack cs_stack_t;
@@ -20,6 +19,4 @@ cs_stack_t* cs_stack_new();
 void cs_stack_free(cs_stack_t*);
 cs_stack_node_t* cs_stack_pop(cs_stack_t*);
 void cs_stack_push(cs_stack_t*, cs_stack_node_t* node);
-
-#endif  /* cs_stack_h */
 

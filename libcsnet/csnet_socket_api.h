@@ -1,5 +1,4 @@
-#ifndef csnet_socket_api_h
-#define csnet_socket_api_h
+#pragma once
 
 int set_nonblocking(int sfd);
 
@@ -18,6 +17,4 @@ void modout(int epfd, int socket, unsigned int sid);
 void modinout(int epfd, int socket, unsigned int sid);
 void modadd(int epfd, int socket, unsigned int sid);
 void moddel(int epfd, int socket, unsigned int sid);
-
-#endif  /* csnet_socket_api_h */
 

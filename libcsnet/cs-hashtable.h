@@ -1,5 +1,4 @@
-#ifndef cs_hashtable_h
-#define cs_hashtable_h
+#pragma once
 
 #include <stdint.h>
 
@@ -38,6 +37,4 @@ cs_htnode_t* cs_ht_search(cs_ht_t*, void* key, int key_len);
  * Both key and vlaue of the node.
  */
 int cs_ht_delete(cs_ht_t*, cs_htnode_t* node);
-
-#endif  /* cs_hashtable_h */
 

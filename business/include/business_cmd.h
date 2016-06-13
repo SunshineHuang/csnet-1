@@ -1,6 +1,4 @@
-#ifndef business_cmd_h
-#define business_cmd_h
-
+#pragma once
 /*
  * Business name: Echo Msg
  *
@@ -12,6 +10,4 @@
  */
 #define csnet_echo_msg_req 0x1001
 #define csnet_echo_msg_rsp 0x1002
-
-#endif  /* business_cmd_h */
 

@@ -1,5 +1,4 @@
-#ifndef cs_binary_search_tree_h
-#define cs_binary_search_tree_h
+#pragma once
 
 typedef struct cs_bsnode cs_bsnode_t;
 typedef struct cs_bstree cs_bstree_t;
@@ -25,6 +24,4 @@ void cs_bstree_inorder_walk(cs_bstree_t*);
 cs_bsnode_t* cs_bstree_minimum(cs_bstree_t*);
 cs_bsnode_t* cs_bstree_maximum(cs_bstree_t*);
 void cs_bstree_invert(cs_bstree_t*);
-
-#endif  /* cs_binary_search_tree_h */
 

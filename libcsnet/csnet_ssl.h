@@ -1,5 +1,4 @@
-#ifndef csnet_ssl_h
-#define csnet_ssl_h
+#pragma once
 
 #include <stdbool.h>
 #include <openssl/ssl.h>
@@ -58,6 +57,4 @@ int csnet_ssl_accept(csnet_ssl_t*, int fd, bool nonblocking, int timeout /* mill
 
 int csnet_ssl_send(csnet_ssl_t*, const char* data, int len);
 int csnet_ssl_recv(csnet_ssl_t*, char* buf, int len);
-
-#endif  /* csnet_ssl_h */
 

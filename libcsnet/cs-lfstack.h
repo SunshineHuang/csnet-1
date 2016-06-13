@@ -1,5 +1,4 @@
-#ifndef cs_lfstack_h
-#define cs_lfstack_h
+#pragma once
 
 #include <stdint.h>
 
@@ -29,6 +28,4 @@ void cs_lfstack_free(cs_lfstack_t*);
 
 void cs_lfstack_push(cs_lfstack_t*, cs_lfstack_node_t* node);
 cs_lfstack_node_t* cs_lfstack_pop(cs_lfstack_t*);
-
-#endif  /* cs_lfstack_h */
 

@@ -1,5 +1,4 @@
-#ifndef csnet_cond_h
-#define csnet_cond_h
+#pragma once
 
 #include <pthread.h>
 
@@ -15,6 +14,4 @@ void csnet_cond_wait(csnet_cond_t*);
 void csnet_cond_wait_sec(csnet_cond_t*, int second);
 void csnet_cond_signal_one(csnet_cond_t*);
 void csnet_cond_signal_all(csnet_cond_t*);
-
-#endif  /* csnet_cond_h */
 
