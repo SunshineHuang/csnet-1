@@ -82,14 +82,13 @@ All the benchmark tests are test on virtual machine on my Macbook Pro.
 
 | threads | through put | qps     |
 |---------|-------------|---------|
-| 1       | 59.17MB/s   | 238000+ |
-| 10      | 82.97MB/s   | 334000+ |
-| 100     | 81.88MB/s   | 330000+ |
-| 200     | 75.97MB/s   | 306000+ |
-| 400     | 89.29MB/s   | 360000+ |
-| 600     | 94.88MB/s   | 382000+ |
-| 800     | 82.17MB/s   | 331000+ |
-| 1000    | 71.40MB/s   | 287000+ |
+| 1       | 41+  MB/s   | 165000+ |
+| 10      | 92+  MB/s   | 375000+ |
+| 100     | 93+  MB/s   | 378000+ |
+| 200     | 92+  MB/s   | 374000+ |
+| 400     | 104+ MB/s   | 438000+ |
+| 600     | 100+ MB/s   | 419000+ |
+| 800     | 96+  MB/s   | 385000+ |
 
 ### Edge server + Midd server benchmark
 - client send package to midd server, midd server send the package to edge server, edge server send back the package to midd server, then midd server send back the packge to client
@@ -101,14 +100,13 @@ All the benchmark tests are test on virtual machine on my Macbook Pro.
 
 | threads | through put | qps     |
 |---------|-------------|---------|
-| 1       | 25.47MB/s   | 102000+ |
-| 10      | 26.30MB/s   | 106000+ |
-| 100     | 23.24MB/s   | 93000+  |
-| 200     | 25.29MB/s   | 101000+ |
-| 400     | 18.04MB/s   | 72000+  |
-| 600     | 21.80MB/s   | 87000+  |
-| 800     | 21.03MB/s   | 84000+  |
-| 1000    | 19.29MB/s   | 77000+  |
+| 1       | 36+  MB/s   | 149000+ |
+| 10      | 35+  MB/s   | 143000+ |
+| 100     | 32+  MB/s   | 130000+ |
+| 200     | 31+  MB/s   | 125000+ |
+| 400     | 29+  MB/s   | 119000+ |
+| 600     | 22+  MB/s   |  91000+ |
+| 800     | 20+  MB/s   |  83000+ |
 
 # License
 
