@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cs-lflist.h"
-#include "spinlock.h"
+#include "csnet_ticket_spinlock.h"
 
 #include <stdint.h>
 
@@ -9,7 +9,7 @@ typedef struct cs_lfhash cs_lfhash_t;
 
 struct cs_lfhash {
 	unsigned int locked;
-	spinlock_t lock;
+	csnet_ticket_spinlock_t lock;
 	int size;
 	uint32_t seed;
 	unsigned long count;
