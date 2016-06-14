@@ -1,6 +1,7 @@
 #include "csnet_ctx.h"
+#include "csnet_utils.h"
+#include "csnet_socket_api.h"
 #include "business_ops.h"
-#include "libcsnet.h"
 
 #include <stdlib.h>
 #include <string.h>
