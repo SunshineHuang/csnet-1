@@ -1,33 +1,30 @@
 # Introduce
-A non-blocking, multi-threaded high performance network library/framework on Linux.
-CS means **C**attle **S**hed, not **C**omputer **S**cience.
-It uses one event loop per thread reactor I/O mode and takes advantage of multi-cores.
+A non-blocking, multi-threaded high performance network library/framework on Linux. The cs in csnet stands for **cattle shed**. It uses one event loop per thread Reactor I/O mode and takes advantage of multi-cores.
 
 ## Server models
 There are two type of server models in CSNet: Middle Server Model and Edge Server Model.
 
-            ┌────────────┐
-            │edge server │
-            └────────────┘
-                   ▲
-                   │
-                   ▼
-         ┌──────────────────┐
-         │   middle server  │
-         └──────────────────┘
-                   ▲
-                   │
-                   ▼
-            ┌────────────┐
-            │   clients  │
-            └────────────┘
+            ┌────────────┐            ┌────────────┐            ┌────────────┐
+            │edge server1│            │edge server2│            │edge server3│
+            └────────────┘            └────────────┘            └────────────┘
+                   ▲                         ▲                         ▲
+                   │_________________________│_________________________│
+                                             ▼
+                                   ┌──────────────────┐
+                                   │   middle server  │
+                                   └──────────────────┘
+                                             ▲
+                                             │
+                                             ▼
+                                      ┌────────────┐
+                                      │   clients  │
+                                      └────────────┘
 
+A server model consist of a executable file (server) and a business module file (business_module.so). It's easy to
+write your own business logic codes.
 
 ## Hot patching
-A server model consist of a executable file (server) and a business module file (business_module.so). It's easy to
-write your own business logic codes throuth the business module. If you found bugs in your business logic code, or you
-need new business logic, just copy the new compiled business module (e.g, business_module.so.virsion) to the dir where
-you deployed it, and it will be **hot patch without killed the process**.
+If you found bugs in your business logic codes, or you need new business logic, just copy the new compiled business module (e.g, business_module.so.virsion) to the dir where you deployed it, there's a hot patching thread will detects (scan the dir and compare the md5sum) the new business module and **hot patch the new business module without killing the process**.
 
 ## Request/Response
 CSNet uses one request one response method to handle every request. Every request should receive a response within
