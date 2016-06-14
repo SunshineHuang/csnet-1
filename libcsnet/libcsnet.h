@@ -8,6 +8,7 @@
 #include "cs-lflist.h"
 #include "cs-lfqueue.h"
 #include "cs-lfstack.h"
+#include "csnet_atomic.h"
 #include "csnet_cmd.h"
 #include "csnet_cond.h"
 #include "csnet_config.h"

@@ -1,11 +1,9 @@
 #include "cs-lflist.h"
-#include "csnet_log.h"
+#include "csnet_atomic.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
-#define cas __sync_bool_compare_and_swap
 
 int inline
 is_marked_reference(intptr_t p) {
@@ -74,7 +72,7 @@ cs_lflist_insert(cs_lflist_t* l, int64_t key, void* data) {
 			return -1;
 		}
 		new_node->next = right_node;
-		if (cas(&(left_node->next), right_node, new_node)) {
+		if (CAS(&(left_node->next), right_node, new_node)) {
 			return 0;
 		}
 	}
@@ -94,13 +92,13 @@ cs_lflist_delete(cs_lflist_t* l, int64_t key) {
 
 		right_node_next = right_node->next;
 		if (!is_marked_reference((intptr_t)right_node_next)) {
-			if (cas(&(right_node->next), right_node_next, get_marked_reference((intptr_t)right_node_next))) {
+			if (CAS(&(right_node->next), right_node_next, get_marked_reference((intptr_t)right_node_next))) {
 				break;
 			}
 		}
 	}
 
-	if (!cas(&(left_node->next), right_node, right_node_next)) {
+	if (!CAS(&(left_node->next), right_node, right_node_next)) {
 		right_node = inner_search(l, right_node->key, &left_node);
 	}
 	cs_lflist_node_free(right_node);
@@ -152,7 +150,7 @@ inner_search(cs_lflist_t* l, int64_t key, cs_lflist_node_t** left_node) {
 				return right_node;
 			}
 		} else {
-			if(cas(&(*left_node)->next, left_node_next, right_node)) {
+			if (CAS(&(*left_node)->next, left_node_next, right_node)) {
 				if ((right_node != l->tail) && is_marked_reference((intptr_t)right_node->next)) {
 					continue;
 				} else {

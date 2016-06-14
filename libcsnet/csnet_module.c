@@ -1,4 +1,5 @@
 #include "csnet_module.h"
+#include "csnet_atomic.h"
 #include "csnet_utils.h"
 #include "cs-lfqueue.h"
 
@@ -47,12 +48,12 @@ csnet_module_load(csnet_module_t* m, const char* module) {
 
 void
 csnet_module_ref_increment(csnet_module_t* m) {
-	__sync_fetch_and_add(&m->ref_count, 1);
+	INC_ONE_ATOMIC(&m->ref_count);
 }
 
 void
 csnet_module_ref_decrement(csnet_module_t* m) {
-	__sync_fetch_and_add(&m->ref_count, -1);
+	DEC_ONE_ATOMIC(&m->ref_count);
 }
 
 void

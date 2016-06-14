@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
+#include <csnet_atomic.h>
 
-#define ACCESS_ONCE(x) (*((volatile __typeof__(x) *) &x))
+#include <stdint.h>
 
 typedef struct csnet_ticket_spinlock {
 	uint64_t serviceid;
@@ -17,20 +17,20 @@ csnet_ticket_spinlock_init(csnet_ticket_spinlock_t* lock) {
 
 static inline void
 csnet_ticket_spinlock_lock(csnet_ticket_spinlock_t* lock) {
-	uint64_t myid = __sync_fetch_and_add(&lock->ticketid, 1);
-	__sync_synchronize();
+	uint64_t myid = INC_ONE_ATOMIC(&lock->ticketid);
+	CPU_BARRIER();
 	while (myid != ACCESS_ONCE(lock->serviceid));
 }
 
 static inline int
 csnet_ticket_spinlock_trylock(csnet_ticket_spinlock_t* lock) {
-	uint64_t myid = __sync_fetch_and_add(&lock->ticketid, 1);
-	__sync_synchronize();
+	uint64_t myid = INC_ONE_ATOMIC(&lock->ticketid);
+	CPU_BARRIER();
 	return (myid == ACCESS_ONCE(lock->serviceid));
 }
 
 static inline void
 csnet_ticket_spinlock_unlock(csnet_ticket_spinlock_t* lock) {
-	__sync_fetch_and_add(&lock->serviceid, 1);
+	INC_ONE_ATOMIC(&lock->serviceid);
 }
 

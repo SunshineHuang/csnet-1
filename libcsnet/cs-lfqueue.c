@@ -1,9 +1,9 @@
 #include "cs-lfqueue.h"
+#include "csnet_atomic.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define cas __sync_bool_compare_and_swap
 #define R(hp) ((hp->H) / 2)  /* threshold R */
 #define L 128
 
@@ -39,7 +39,7 @@ static cs_lfqnode_t* new_qnode(void* data);
 void cs_lfqueue_register_thread(cs_lfqueue_t* q) {
 	/* First try to reuse a retired HP record */
 	for (cs_hp_record_t* record = q->HP->head_hp_record; record; record = record->next) {
-		if (record->active || !cas(&record->active, 0, 1)) {
+		if (record->active || !CAS(&record->active, 0, 1)) {
 			continue;
 		}
 		my_record = record;
@@ -48,14 +48,14 @@ void cs_lfqueue_register_thread(cs_lfqueue_t* q) {
 
 	/* No HP records avaliable for resue.
 	   Increment H, then allocate a new HP and push it */
-	__sync_fetch_and_add(&q->HP->H, K);
+	INC_N_ATOMIC(&q->HP->H, K);
 	cs_hp_record_t* new_record = hp_record_new();
 	cs_hp_record_t* old_record;
 
 	do {
 		old_record = q->HP->head_hp_record;
 		new_record->next = old_record;
-	} while (!cas(&q->HP->head_hp_record, old_record, new_record));
+	} while (!CAS(&q->HP->head_hp_record, old_record, new_record));
 
 	my_record = new_record;
 }
@@ -100,16 +100,16 @@ cs_lfqueue_enq(cs_lfqueue_t* q, void* data) {
 		}
 
 		if (next) {
-			cas(&q->tail, tail, next);
+			CAS(&q->tail, tail, next);
 			continue;
 		}
 
-		if (cas(&tail->next, NULL, node)) {
+		if (CAS(&tail->next, NULL, node)) {
 			break;
 		}
 	}
 
-	cas(&q->tail, tail, node);
+	CAS(&q->tail, tail, node);
 	my_record->hp[0] = NULL;
 	return 1;
 }
@@ -141,12 +141,12 @@ cs_lfqueue_deq(cs_lfqueue_t* q, void** data) {
 		}
 
 		if (head == tail) {
-			cas(&q->tail, tail, next);
+			CAS(&q->tail, tail, next);
 			continue;
 		}
 
 		*data = next->data;
-		if (cas(&q->head, head, next)) {
+		if (CAS(&q->head, head, next)) {
 			break;
 		}
 	}
@@ -255,7 +255,7 @@ static void
 help_scan(cs_hp_t* hp, cs_hp_record_t* private_record) {
 	cs_hp_record_t* head_record = hp->head_hp_record;
 	for (; head_record; head_record = head_record->next) {
-		if (head_record->active || !cas(&head_record->active, 0, 1)) {
+		if (head_record->active || !CAS(&head_record->active, 0, 1)) {
 			continue;
 		}
 

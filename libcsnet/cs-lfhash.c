@@ -1,4 +1,5 @@
 #include "cs-lfhash.h"
+#include "csnet_atomic.h"
 
 #include <stdlib.h>
 
@@ -35,7 +36,7 @@ cs_lfhash_insert(cs_lfhash_t* ht, int64_t key, void* data) {
 	int index = hash % ht->size;
 	int ret = cs_lflist_insert(ht->table[index], key, data);
 	if (ret == 0) {
-		__sync_fetch_and_add(&ht->count, 1);
+		INC_ONE_ATOMIC(&ht->count);
 	}
 	if (ht->locked) {
 		csnet_ticket_spinlock_unlock(&ht->lock);
@@ -69,7 +70,7 @@ int cs_lfhash_delete(cs_lfhash_t* ht, int64_t key) {
 	int index = hash % ht->size;
 	int ret = cs_lflist_delete(ht->table[index], key);
 	if (ret == 0) {
-		__sync_fetch_and_add(&ht->count, -1);
+		DEC_ONE_ATOMIC(&ht->count);
 	}
 	if (ht->locked) {
 		csnet_ticket_spinlock_unlock(&ht->lock);
@@ -79,7 +80,7 @@ int cs_lfhash_delete(cs_lfhash_t* ht, int64_t key) {
 
 unsigned long
 cs_lfhash_count(cs_lfhash_t* ht) {
-	return __sync_fetch_and_add(&ht->count, 0);
+	return INC_N_ATOMIC(&ht->count, 0);
 }
 
 cs_lflist_t*

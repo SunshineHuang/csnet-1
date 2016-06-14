@@ -1,4 +1,5 @@
 #include "csnet_ctx.h"
+#include "csnet_atomic.h"
 #include "csnet_utils.h"
 #include "csnet_socket_api.h"
 #include "business_ops.h"
@@ -43,10 +44,10 @@ csnet_ctx_free(csnet_ctx_t* ctx) {
 
 int64_t
 csnet_ctx_ctxid(csnet_ctx_t* ctx) {
-	int64_t ctxid = __sync_fetch_and_add(&(ctx->ctxid), 1);
+	int64_t ctxid = INC_ONE_ATOMIC(&ctx->ctxid);
 	if (ctxid == 0xcafebabeface) {
 		ctx->ctxid = 1;
-		return __sync_fetch_and_add(&(ctx->ctxid), 1);
+		return INC_ONE_ATOMIC(&ctx->ctxid);
 	}
 	return ctxid;
 }
@@ -114,7 +115,7 @@ csnet_ctx_book_keeping(csnet_ctx_t* ctx) {
 	}
 	ctx->curr_time = now;
 	ctx->prev_wheel = ctx->curr_wheel;
-	__sync_fetch_and_add(&ctx->curr_wheel, 1);
+	INC_ONE_ATOMIC(&ctx->curr_wheel);
 	if (ctx->curr_wheel > ctx->timeout) {
 		ctx->curr_wheel = 0;
 	}

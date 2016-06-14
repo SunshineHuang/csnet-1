@@ -1,4 +1,5 @@
 #include "csnet_conntor.h"
+#include "csnet_atomic.h"
 #include "csnet_head.h"
 #include "csnet_cmd.h"
 #include "csnet_socket_api.h"
@@ -357,7 +358,7 @@ csnet_conntor_get_sock(csnet_conntor_t* conntor, csnet_server_type_t server_type
 	struct server_node* server_node = slot->curr_node->data;
 
 	if (server_node) {
-		int idx = __sync_fetch_and_add(&server_node->index, 1);
+		int idx = INC_ONE_ATOMIC(&server_node->index);
 		if (idx >= 4) {
 			server_node->index = 0;
 			idx = 0;
