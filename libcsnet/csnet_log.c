@@ -1,5 +1,6 @@
 #include "csnet_log.h"
 #include "csnet_cond.h"
+#include "csnet_fast.h"
 #include "csnet_utils.h"
 #include "csnet_ticket_spinlock.h"
 
@@ -62,7 +63,7 @@ _malloc_log_buffer() {
 
 static inline void
 _append(log_buffer_t* log_buffer, const char* msg, int _len) {
-	if (!log_buffer) {
+	if (csnet_slow(!log_buffer)) {
 		return;
 	}
 	memcpy(log_buffer->data + log_buffer->seek, msg, _len);

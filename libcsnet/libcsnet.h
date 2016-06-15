@@ -16,6 +16,7 @@
 #include "csnet_ctx.h"
 #include "csnet_el.h"
 #include "csnet_epoller.h"
+#include "csnet_fast.h"
 #include "csnet.h"
 #include "csnet_head.h"
 #include "csnet_hotpatch.h"

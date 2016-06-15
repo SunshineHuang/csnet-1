@@ -1,5 +1,6 @@
 #include "csnet_timer.h"
 #include "csnet_log.h"
+#include "csnet_fast.h"
 #include "csnet_utils.h"
 
 #include <stdlib.h>
@@ -46,7 +47,7 @@ csnet_timer_insert(csnet_timer_t* timer, int fd, unsigned int sid) {
 	}
 
 	csnet_timer_node_t* node = (csnet_timer_node_t*)calloc(1, sizeof(*node));
-	if (!node) {
+	if (csnet_slow(!node)) {
 		csnet_oom(sizeof(*node));
 	}
 
@@ -72,7 +73,7 @@ csnet_timer_update(csnet_timer_t* timer, unsigned int timerid) {
 
 	csnet_timer_node_t* timer_node = cs_lfhash_search(timer->wheels_tbl[*which_wheel], timerid);
 
-	if (timer_node) {
+	if (csnet_fast(timer_node)) {
 		cs_lfhash_delete(timer->wheels_tbl[*which_wheel], timerid);
 		*which_wheel = timer->curr_wheel;
 		cs_lfhash_insert(timer->wheels_tbl[*which_wheel], timerid, timer_node);
@@ -82,7 +83,7 @@ csnet_timer_update(csnet_timer_t* timer, unsigned int timerid) {
 void
 csnet_timer_remove(csnet_timer_t* timer, unsigned int timerid) {
 	int* which_wheel = cs_lfhash_search(timer->which_wheel_tbl, timerid);
-	if (!which_wheel) {
+	if (csnet_slow(!which_wheel)) {
 		return;
 	}
 

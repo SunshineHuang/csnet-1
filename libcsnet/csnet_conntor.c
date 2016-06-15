@@ -6,6 +6,7 @@
 #include "csnet_utils.h"
 #include "csnet_log.h"
 #include "csnet_msg.h"
+#include "csnet_fast.h"
 
 #include <unistd.h>
 #include <stdio.h>
@@ -91,9 +92,9 @@ _conntor_thread(void* arg) {
 			sock = csnet_sockset_get(conntor->sockset, sid);
 			fd = sock->fd;
 
-			if (csnet_epoller_event_is_readable(ee)) {
+			if (csnet_fast(csnet_epoller_event_is_readable(ee))) {
 				int nrecv = csnet_sock_recv(sock);
-				if (nrecv > 0) {
+				if (csnet_fast(nrecv > 0)) {
 					while (1) {
 						char* data = csnet_rb_data(sock->rb);
 						int data_len = sock->rb->data_len;
@@ -125,7 +126,7 @@ _conntor_thread(void* arg) {
 							break;
 						}
 
-						if (head->cmd != CSNET_HEARTBEAT_ACK) {
+						if (csnet_fast(head->cmd != CSNET_HEARTBEAT_ACK)) {
 							csnet_module_ref_increment(conntor->module);
 							csnet_module_entry(conntor->module, sock, head, data + HEAD_LEN,
 									head->len - HEAD_LEN);

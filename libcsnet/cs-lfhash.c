@@ -1,4 +1,5 @@
 #include "cs-lfhash.h"
+#include "csnet_fast.h"
 #include "csnet_atomic.h"
 
 #include <stdlib.h>
@@ -29,7 +30,7 @@ cs_lfhash_free(cs_lfhash_t* ht) {
 
 int
 cs_lfhash_insert(cs_lfhash_t* ht, int64_t key, void* data) {
-	if (ht->locked) {
+	if (csnet_slow(ht->locked)) {
 		csnet_ticket_spinlock_lock(&ht->lock);
 	}
 	uint32_t hash = do_hash(ht->seed, (void*)&key, sizeof(int64_t));
@@ -38,7 +39,7 @@ cs_lfhash_insert(cs_lfhash_t* ht, int64_t key, void* data) {
 	if (ret == 0) {
 		INC_ONE_ATOMIC(&ht->count);
 	}
-	if (ht->locked) {
+	if (csnet_slow(ht->locked)) {
 		csnet_ticket_spinlock_unlock(&ht->lock);
 	}
 	return ret;
@@ -47,7 +48,7 @@ cs_lfhash_insert(cs_lfhash_t* ht, int64_t key, void* data) {
 void*
 cs_lfhash_search(cs_lfhash_t* ht, int64_t key) {
 	void* data = NULL;
-	if (ht->locked) {
+	if (csnet_slow(ht->locked)) {
 		csnet_ticket_spinlock_lock(&ht->lock);
 	}
 	uint32_t hash = do_hash(ht->seed, (void*)&key, sizeof(int64_t));
@@ -56,14 +57,14 @@ cs_lfhash_search(cs_lfhash_t* ht, int64_t key) {
 	if (node) {
 		data = node->data;
 	}
-	if (ht->locked) {
+	if (csnet_slow(ht->locked)) {
 		csnet_ticket_spinlock_unlock(&ht->lock);
 	}
 	return data;
 }
 
 int cs_lfhash_delete(cs_lfhash_t* ht, int64_t key) {
-	if (ht->locked) {
+	if (csnet_slow(ht->locked)) {
 		csnet_ticket_spinlock_lock(&ht->lock);
 	}
 	uint32_t hash = do_hash(ht->seed, (void*)&key, sizeof(int64_t));
@@ -72,7 +73,7 @@ int cs_lfhash_delete(cs_lfhash_t* ht, int64_t key) {
 	if (ret == 0) {
 		DEC_ONE_ATOMIC(&ht->count);
 	}
-	if (ht->locked) {
+	if (csnet_slow(ht->locked)) {
 		csnet_ticket_spinlock_unlock(&ht->lock);
 	}
 	return ret;

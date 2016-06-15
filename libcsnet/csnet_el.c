@@ -1,9 +1,10 @@
 #include "csnet_el.h"
 #include "csnet_msg.h"
-#include "csnet_utils.h"
-#include "csnet_head.h"
-#include "csnet_sockset.h"
 #include "csnet_cmd.h"
+#include "csnet_fast.h"
+#include "csnet_head.h"
+#include "csnet_utils.h"
+#include "csnet_sockset.h"
 #include "csnet_socket_api.h"
 
 #include <unistd.h>
@@ -43,7 +44,7 @@ csnet_el_new(int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t
 int
 csnet_el_add_connection(csnet_el_t* el, int fd) {
 	unsigned int sid;
-	if (el->cur_conn++ > el->max_conn) {
+	if (csnet_slow(el->cur_conn++ > el->max_conn)) {
 		LOG_WARNING(el->log, "Too much connections, closing socket %d", fd);
 		return -1;
 	}
@@ -62,11 +63,12 @@ csnet_el_out_loop(void* arg) {
 
 	while (1) {
 		csnet_msg_t* msg = NULL;
-		if (cs_lfqueue_deq(q, (void*)&msg) == 1) {
+		int ret = cs_lfqueue_deq(q, (void*)&msg);
+		if (csnet_fast(ret == 1)) {
 			int nsend = csnet_sock_send(msg->sock, msg->data, msg->size);
 			csnet_msg_free(msg);
 		} else {
-			usleep(100);
+			usleep(10);
 		}
 	}
 }
@@ -89,9 +91,9 @@ csnet_el_in_loop(void* arg) {
 			sock = csnet_sockset_get(el->sockset, sid);
 			fd = sock->fd;
 
-			if (csnet_epoller_event_is_readable(ee)) {
+			if (csnet_fast(csnet_epoller_event_is_readable(ee))) {
 				int nrecv = csnet_sock_recv(sock);
-				if (nrecv > 0) {
+				if (csnet_fast(nrecv > 0)) {
 					while (1) {
 						char* data = csnet_rb_data(sock->rb);
 						int data_len = sock->rb->data_len;
@@ -115,7 +117,7 @@ csnet_el_in_loop(void* arg) {
 							break;
 						}
 
-						if (head->cmd != CSNET_HEARTBEAT_SYN) {
+						if (csnet_fast(head->cmd != CSNET_HEARTBEAT_SYN)) {
 							csnet_module_ref_increment(el->module);
 							csnet_module_entry(el->module, sock, head, data + HEAD_LEN,
 									head->len - HEAD_LEN);

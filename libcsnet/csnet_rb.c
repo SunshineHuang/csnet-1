@@ -1,5 +1,4 @@
 #include "csnet_rb.h"
-#include "csnet_log.h"
 #include "csnet_utils.h"
 
 #include <stdlib.h>

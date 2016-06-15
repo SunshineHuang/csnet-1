@@ -3,6 +3,7 @@
 #include "csnet_utils.h"
 #include "csnet_socket_api.h"
 #include "business_ops.h"
+#include "csnet_fast.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +46,7 @@ csnet_ctx_free(csnet_ctx_t* ctx) {
 int64_t
 csnet_ctx_ctxid(csnet_ctx_t* ctx) {
 	int64_t ctxid = INC_ONE_ATOMIC(&ctx->ctxid);
-	if (ctxid == 0xcafebabeface) {
+	if (csnet_slow(ctxid == 0xcafebabeface)) {
 		ctx->ctxid = 1;
 		return INC_ONE_ATOMIC(&ctx->ctxid);
 	}
@@ -55,7 +56,7 @@ csnet_ctx_ctxid(csnet_ctx_t* ctx) {
 int
 csnet_ctx_insert(csnet_ctx_t* ctx, int64_t ctxid, void* business, int bsize) {
 	int* which_wheel = malloc(sizeof(int));
-	if (!which_wheel) {
+	if (csnet_slow(!which_wheel)) {
 		csnet_oom(sizeof(int));
 	}
 	*which_wheel = ctx->prev_wheel;
@@ -72,7 +73,7 @@ csnet_ctx_update(csnet_ctx_t* ctx, int64_t ctxid) {
 	int curr_wheel = ctx->curr_wheel;
 	int* which_wheel = cs_lfhash_search(ctx->which_wheel_tbl, ctxid);
 
-	if (which_wheel) {
+	if (csnet_fast(which_wheel)) {
 		if (*which_wheel != prev_wheel) {
 			void* b = cs_lfhash_search(ctx->wheels_tbl[*which_wheel], ctxid);
 			if (b) {
@@ -87,7 +88,7 @@ csnet_ctx_update(csnet_ctx_t* ctx, int64_t ctxid) {
 void*
 csnet_ctx_search(csnet_ctx_t* ctx, int64_t ctxid) {
 	int* which_wheel = cs_lfhash_search(ctx->which_wheel_tbl, ctxid);
-	if (which_wheel) {
+	if (csnet_fast(which_wheel)) {
 		return cs_lfhash_search(ctx->wheels_tbl[*which_wheel], ctxid);
 	}
 	return NULL;
@@ -100,7 +101,7 @@ csnet_ctx_search(csnet_ctx_t* ctx, int64_t ctxid) {
 void
 csnet_ctx_delete(csnet_ctx_t* ctx, int64_t ctxid) {
 	int* which_wheel = cs_lfhash_search(ctx->which_wheel_tbl, ctxid);
-	if (which_wheel) {
+	if (csnet_fast(which_wheel)) {
 		cs_lfhash_delete(ctx->wheels_tbl[*which_wheel], ctxid);
 		cs_lfhash_delete(ctx->which_wheel_tbl, ctxid);
 		free(which_wheel);

@@ -1,4 +1,5 @@
 #include "csnet_unpack.h"
+#include "csnet_fast.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,7 +18,7 @@ csnet_unpack_init(csnet_unpack_t* upk, const char* data, int len) {
 char
 csnet_unpack_getc(csnet_unpack_t* upk) {
 	int size = sizeof(char);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -31,7 +32,7 @@ csnet_unpack_getc(csnet_unpack_t* upk) {
 unsigned char
 csnet_unpack_getuc(csnet_unpack_t* upk) {
 	int size = sizeof(unsigned char);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -45,7 +46,7 @@ csnet_unpack_getuc(csnet_unpack_t* upk) {
 short
 csnet_unpack_gets(csnet_unpack_t* upk) {
 	int size = sizeof(short);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -59,7 +60,7 @@ csnet_unpack_gets(csnet_unpack_t* upk) {
 int
 csnet_unpack_geti(csnet_unpack_t* upk) {
 	int size = sizeof(int);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -73,7 +74,7 @@ csnet_unpack_geti(csnet_unpack_t* upk) {
 unsigned int
 csnet_unpack_getui(csnet_unpack_t* upk) {
 	int size = sizeof(unsigned int);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -87,7 +88,7 @@ csnet_unpack_getui(csnet_unpack_t* upk) {
 long
 csnet_unpack_getl(csnet_unpack_t* upk) {
 	int size = sizeof(long);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -101,7 +102,7 @@ csnet_unpack_getl(csnet_unpack_t* upk) {
 long long
 csnet_unpack_getll(csnet_unpack_t* upk) {
 	int size = sizeof(long long);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -115,7 +116,7 @@ csnet_unpack_getll(csnet_unpack_t* upk) {
 unsigned long
 csnet_unpack_getul(csnet_unpack_t* upk) {
 	int size = sizeof(unsigned long);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -129,7 +130,7 @@ csnet_unpack_getul(csnet_unpack_t* upk) {
 unsigned long long
 csnet_unpack_getull(csnet_unpack_t* upk) {
 	int size = sizeof(unsigned long long);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		int seek = upk->seek;
 		upk->seek += size;
 		upk->remain -= size;
@@ -143,7 +144,7 @@ csnet_unpack_getull(csnet_unpack_t* upk) {
 const char*
 csnet_unpack_getstr(csnet_unpack_t* upk) {
 	int size = sizeof(short);
-	if (upk->remain >= size) {
+	if (csnet_fast(upk->remain >= size)) {
 		short len = 0;
 		memcpy(&len, upk->data + upk->seek, size);
 		upk->seek += size;
