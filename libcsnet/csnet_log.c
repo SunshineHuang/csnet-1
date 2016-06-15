@@ -2,7 +2,7 @@
 #include "csnet_cond.h"
 #include "csnet_fast.h"
 #include "csnet_utils.h"
-#include "csnet_ticket_spinlock.h"
+#include "csnet_spinlock.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -32,7 +32,7 @@ typedef struct log_buffer {
 
 struct csnet_log {
 	int level;
-	csnet_ticket_spinlock_t lock;
+	csnet_spinlock_t lock;
 	int rotate_size;
 	int fseek;
 	int fd;
@@ -152,7 +152,7 @@ thread_flush(void* arg) {
 			csnet_cond_wait_sec(&log->cond, 1);
 		}
 
-		csnet_ticket_spinlock_lock(&log->lock);
+		csnet_spinlock_lock(&log->lock);
 		log->fseek += write(log->fd, log->head->data, log->head->seek);
 		if (log->fseek >= log->rotate_size) {
 			_create_new_file(log);
@@ -161,7 +161,7 @@ thread_flush(void* arg) {
 		log->head->seek = 0;
 		log->head->remain = BUFFER_SIZE;
 		log->head = log->head->next;
-		csnet_ticket_spinlock_unlock(&log->lock);
+		csnet_spinlock_unlock(&log->lock);
 	}
 
 	return NULL;
@@ -170,7 +170,7 @@ thread_flush(void* arg) {
 csnet_log_t*
 csnet_log_new(const char* logname, int level, long rotate_size) {
 	csnet_log_t* log = calloc(1, sizeof(csnet_log_t));
-	csnet_ticket_spinlock_init(&log->lock);
+	csnet_spinlock_init(&log->lock);
 	log->level = level;
 	log->rotate_size = rotate_size;
 	log->fseek = 0;
@@ -254,7 +254,7 @@ csnet_log_log(csnet_log_t* log, int level, const char* filename, int lineno, con
 	len = snprintf(buf, BUFFER_LEN, "%s %s %ld %s:%d %s\n", time_fmt,
 		       log->info[level], syscall(__NR_gettid), filename, lineno, user_msg);
 
-	csnet_ticket_spinlock_lock(&log->lock);
+	csnet_spinlock_lock(&log->lock);
 	if (log->tail->remain > len) {
 		_append(log->tail, buf, len);
 	} else {
@@ -263,7 +263,7 @@ csnet_log_log(csnet_log_t* log, int level, const char* filename, int lineno, con
 		_append(log->tail, buf, len);
 	}
 
-	csnet_ticket_spinlock_unlock(&log->lock);
+	csnet_spinlock_unlock(&log->lock);
 }
 
 void
@@ -280,10 +280,10 @@ csnet_log_fatal(csnet_log_t* log, const char* filename, int lineno, const char* 
 	_format_time(log, time_fmt);
 	int len = snprintf(buf, BUFFER_LEN, "%s FATAL %ld %s:%d %s\n", time_fmt,
 			   syscall(__NR_gettid), filename, lineno, user_msg);
-	csnet_ticket_spinlock_lock(&log->lock);
+	csnet_spinlock_lock(&log->lock);
 	write(log->fd, log->head->data, log->head->seek);
 	write(log->fd, buf, len);
-	csnet_ticket_spinlock_unlock(&log->lock);
+	csnet_spinlock_unlock(&log->lock);
 	exit(-1);
 }
 

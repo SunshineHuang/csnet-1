@@ -29,6 +29,7 @@
 #include "csnet_socket_api.h"
 #include "csnet_sock.h"
 #include "csnet_sockset.h"
+#include "csnet_spinlock.h"
 #include "csnet_ssl.h"
 #include "csnet_ticket_spinlock.h"
 #include "csnet_timer.h"
