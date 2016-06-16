@@ -97,7 +97,7 @@ _conntor_thread(void* arg) {
 				if (csnet_fast(nrecv > 0)) {
 					while (1) {
 						char* data = csnet_rb_data(sock->rb);
-						int data_len = sock->rb->data_len;
+						unsigned int data_len = sock->rb->data_len;
 						csnet_head_t* head = (csnet_head_t*)data;
 
 						if (data_len < HEAD_LEN) {

@@ -20,7 +20,7 @@ _expand(int size) {
 }
 
 csnet_rb_t*
-csnet_rb_new(int size) {
+csnet_rb_new(unsigned int size) {
 	csnet_rb_t* rb = calloc(1, sizeof(*rb));
 	if (!rb) {
 		csnet_oom(sizeof(*rb));
@@ -45,12 +45,12 @@ csnet_rb_free(csnet_rb_t* rb) {
 }
 
 int
-csnet_rb_append(csnet_rb_t* rb, const char* data, int len) {
+csnet_rb_append(csnet_rb_t* rb, const char* data, unsigned int len) {
 	if ((rb->data_len == 0) && (rb->seek == 0)) {
 		memcpy(rb->buffer, data, len);
 		rb->data_len = len;
 	} else {
-		int remain = rb->capacity - rb->data_len;
+		unsigned int remain = rb->capacity - rb->data_len;
 		if (remain >= len) {
 			if (rb->capacity - (rb->seek + rb->data_len) >= len) {
 				memcpy(rb->buffer + rb->seek + rb->data_len, data, len);
@@ -80,8 +80,8 @@ csnet_rb_append(csnet_rb_t* rb, const char* data, int len) {
 	return 0;
 }
 
-int
-csnet_rb_seek(csnet_rb_t* rb, int len) {
+unsigned int
+csnet_rb_seek(csnet_rb_t* rb, unsigned int len) {
 	if (len > rb->data_len) {
 		/* TODO: data_len and seek should be reset ? */
 		return 0;
@@ -100,7 +100,7 @@ csnet_rb_data(csnet_rb_t* rb) {
 	return rb->buffer + rb->seek;
 }
 
-int
+unsigned int
 csnet_rb_data_len(csnet_rb_t* rb) {
 	return rb->data_len;
 }

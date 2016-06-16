@@ -65,7 +65,7 @@ csnet_el_out_loop(void* arg) {
 		csnet_msg_t* msg = NULL;
 		int ret = cs_lfqueue_deq(q, (void*)&msg);
 		if (csnet_fast(ret == 1)) {
-			int nsend = csnet_sock_send(msg->sock, msg->data, msg->size);
+			csnet_sock_send(msg->sock, msg->data, msg->size);
 			csnet_msg_free(msg);
 		} else {
 			usleep(10);
@@ -96,7 +96,7 @@ csnet_el_in_loop(void* arg) {
 				if (csnet_fast(nrecv > 0)) {
 					while (1) {
 						char* data = csnet_rb_data(sock->rb);
-						int data_len = sock->rb->data_len;
+						unsigned int data_len = sock->rb->data_len;
 						csnet_head_t* head = (csnet_head_t*)data;
 
 						if (data_len < HEAD_LEN) {

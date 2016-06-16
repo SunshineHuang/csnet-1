@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define R(hp) ((hp->H) / 2)  /* threshold R */
+#define R(hp) (unsigned int)((hp->H) / 2)  /* threshold R */
 #define L 128
 
 struct hp_list {
