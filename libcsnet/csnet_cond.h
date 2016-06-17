@@ -2,6 +2,12 @@
 
 #include <pthread.h>
 
+#define CSNET_COND_INITILIAZER              \
+{                                           \
+	.mutex = PTHREAD_MUTEX_INITIALIZER, \
+	.cond = PTHREAD_COND_INITIALIZER    \
+}
+
 typedef struct csnet_cond {
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;

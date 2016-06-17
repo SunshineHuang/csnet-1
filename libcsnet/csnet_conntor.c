@@ -2,6 +2,7 @@
 #include "csnet_atomic.h"
 #include "csnet_head.h"
 #include "csnet_cmd.h"
+#include "csnet.h"
 #include "csnet_socket_api.h"
 #include "csnet_utils.h"
 #include "csnet_log.h"
@@ -27,6 +28,7 @@
 
 #define MAGIC_NUMBER 1024
 #define SLOT_SIZE 32
+#define PER_SERVER_TYPE_NUM 4
 
 struct server_node {
 	csnet_server_type_t server_type;
@@ -34,7 +36,7 @@ struct server_node {
 	int port;
 	char ip[16];
 	char name[64];
-	unsigned int sids[4];
+	unsigned int sids[PER_SERVER_TYPE_NUM];
 };
 
 struct slot {
@@ -66,7 +68,7 @@ _heartbeat(csnet_conntor_t* conntor) {
 			csnet_sock_t* sock = csnet_sockset_get(conntor->sockset, sid);
 			csnet_msg_t* msg = csnet_msg_new(h.len, sock);
 			csnet_msg_append(msg, (char*)&h, h.len);
-			cs_lfqueue_enq(conntor->q, msg);
+			csnet_sendto(conntor->q, msg);
 			head = head->next;
 		}
 		cs_lflist_free(keys);
@@ -74,7 +76,7 @@ _heartbeat(csnet_conntor_t* conntor) {
 }
 
 static void*
-_conntor_thread(void* arg) {
+csnet_conntor_io_loop(void* arg) {
 	csnet_conntor_t* conntor = (csnet_conntor_t *)arg;
 	cs_lfqueue_t* q = conntor->q;
 	cs_lfqueue_register_thread(q);
@@ -113,7 +115,7 @@ _conntor_thread(void* arg) {
 
 							if (server_node) {
 								cs_lfhash_delete(conntor->hashtbl, sid);
-								for (int j = 0; j < 4; j++) {
+								for (int j = 0; j < PER_SERVER_TYPE_NUM; j++) {
 									if (server_node->sids[j] == sid) {
 										server_node->sids[j] = 0;
 									}
@@ -150,7 +152,7 @@ _conntor_thread(void* arg) {
 
 					if (server_node) {
 						cs_lfhash_delete(conntor->hashtbl, sid);
-						for (int j = 0; j < 4; j++) {
+						for (int j = 0; j < PER_SERVER_TYPE_NUM; j++) {
 							if (server_node->sids[j] == sid) {
 								server_node->sids[j] = 0;
 							}
@@ -307,7 +309,7 @@ csnet_conntor_connect_servers(csnet_conntor_t* conntor) {
 
 		while (dnode) {
 			struct server_node* server_node = dnode->data;
-			for (int i = 0; i < 4; i++) {
+			for (int i = 0; i < PER_SERVER_TYPE_NUM; i++) {
 				int fd = nonblocking_connect(server_node->ip, server_node->port, 500);
 				if (fd != -1) {
 					set_nonblocking(fd);
@@ -333,7 +335,7 @@ csnet_conntor_reconnect_servers(csnet_conntor_t* conntor) {
 
 		while (node) {
 			struct server_node* server_node = node->data;
-			for (int i = 0; i < 4; i++) {
+			for (int i = 0; i < PER_SERVER_TYPE_NUM; i++) {
 				if (server_node->sids[i] == 0) {
 					int fd = nonblocking_connect(server_node->ip, server_node->port, 500);
 					if (fd != -1) {
@@ -360,7 +362,7 @@ csnet_conntor_get_sock(csnet_conntor_t* conntor, csnet_server_type_t server_type
 
 	if (server_node) {
 		int idx = INC_ONE_ATOMIC(&server_node->index);
-		if (idx >= 4) {
+		if (idx >= PER_SERVER_TYPE_NUM) {
 			server_node->index = 0;
 			idx = 0;
 		}
@@ -374,8 +376,8 @@ csnet_conntor_get_sock(csnet_conntor_t* conntor, csnet_server_type_t server_type
 void
 csnet_conntor_loop(csnet_conntor_t* conntor) {
 	pthread_t tid;
-	if (pthread_create(&tid, NULL, _conntor_thread, conntor) < 0) {
-		LOG_FATAL(conntor->log, "create _conntor_thread() error. pthread_create(): %s", strerror(errno));
+	if (pthread_create(&tid, NULL, csnet_conntor_io_loop, conntor) < 0) {
+		LOG_FATAL(conntor->log, "create csnet_conntor_io_loop() error. pthread_create(): %s", strerror(errno));
 	}
 	int cpu_cores = csnet_cpu_cores();
 	if (cpu_cores > 4) {

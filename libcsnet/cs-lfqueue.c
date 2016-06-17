@@ -111,7 +111,7 @@ cs_lfqueue_enq(cs_lfqueue_t* q, void* data) {
 
 	CAS(&q->tail, tail, node);
 	my_record->hp[0] = NULL;
-	return 1;
+	return 0;
 }
 
 int
@@ -155,7 +155,7 @@ cs_lfqueue_deq(cs_lfqueue_t* q, void** data) {
 	my_record->hp[0] = NULL;
 	my_record->hp[1] = NULL;
 
-	return 1;
+	return 0;
 }
 
 static struct

@@ -1,13 +1,7 @@
 #include "bmin_send_msg.h"
 #include "business_cmd.h"
 #include "head_status.h"
-#include "csnet_log.h"
-#include "csnet_pack.h"
-#include "csnet_unpack.h"
-#include "csnet_conntor.h"
-#include "csnet_ctx.h"
-#include "cs-lfqueue.h"
-#include "csnet_msg.h"
+#include "libcsnet.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -55,7 +49,7 @@ bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, i
 	csnet_msg = csnet_msg_new(h.len, server_sock);
 	csnet_msg_append(csnet_msg, (char*)&h, HEAD_LEN);
 	csnet_msg_append(csnet_msg, data, data_len);
-	cs_lfqueue_enq(Q, csnet_msg);
+	csnet_sendto(Q, csnet_msg);
 
 	return h.ctxid;
 }
@@ -79,7 +73,7 @@ bmin_send_msg_rsp(void* b, csnet_head_t* head, char* data, int data_len) {
 	csnet_msg_t* msg = csnet_msg_new(bm->head.len, bm->sock);
 	csnet_msg_append(msg, (char*)&bm->head, HEAD_LEN);
 	csnet_msg_append(msg, data, data_len);
-	cs_lfqueue_enq(Q, msg);
+	csnet_sendto(Q, msg);
 
 	return 0;
 }
@@ -98,7 +92,7 @@ bmin_send_msg_timeout(void* b) {
 	};
 	csnet_msg_t* msg = csnet_msg_new(h.len, bm->sock);
 	csnet_msg_append(msg, (char*)&bm->head, HEAD_LEN);
-	cs_lfqueue_enq(Q, msg);
+	csnet_sendto(Q, msg);
 	return 0;
 }
 
@@ -112,7 +106,7 @@ bmin_send_msg_err(void* b, csnet_sock_t* sock, csnet_head_t* head) {
 
 	csnet_msg_t* msg = csnet_msg_new(bm->head.len, bm->sock);
 	csnet_msg_append(msg, (char*)&bm->head, HEAD_LEN);
-	cs_lfqueue_enq(Q, msg);
+	csnet_sendto(Q, msg);
 }
 
 void

@@ -2,12 +2,7 @@
 #include "business_cmd.h"
 #include "head_status.h"
 
-#include "cs-lfqueue.h"
-#include "csnet_log.h"
-#include "csnet_msg.h"
-#include "csnet_pack.h"
-#include "csnet_unpack.h"
-#include "csnet_conntor.h"
+#include "libcsnet.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -54,14 +49,14 @@ bmin_send_msg_req(void* b, csnet_sock_t* sock, csnet_head_t* head, char* data, i
 		csnet_msg = csnet_msg_new(h.len, sock);
 		csnet_msg_append(csnet_msg, (char*)&h, HEAD_LEN);
 		csnet_msg_append(csnet_msg, pack.data, pack.len);
-		cs_lfqueue_enq(Q, csnet_msg);
+		csnet_sendto(Q, csnet_msg);
 	} else {
 		LOG_ERROR(LOG, "unpack error");
 		h.len = HEAD_LEN;
 		h.status = HS_PKG_ERR;
 		csnet_msg = csnet_msg_new(h.len, sock);
 		csnet_msg_append(csnet_msg, (char*)&h, HEAD_LEN);
-		cs_lfqueue_enq(Q, csnet_msg);
+		csnet_sendto(Q, csnet_msg);
 	}
 
 	return 0;

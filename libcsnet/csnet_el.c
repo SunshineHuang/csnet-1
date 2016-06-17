@@ -1,3 +1,4 @@
+#include "csnet.h"
 #include "csnet_el.h"
 #include "csnet_msg.h"
 #include "csnet_cmd.h"
@@ -57,24 +58,7 @@ csnet_el_add_connection(csnet_el_t* el, int fd) {
 }
 
 void*
-csnet_el_out_loop(void* arg) {
-	cs_lfqueue_t* q = (cs_lfqueue_t*)arg;
-	cs_lfqueue_register_thread(q);
-
-	while (1) {
-		csnet_msg_t* msg = NULL;
-		int ret = cs_lfqueue_deq(q, (void*)&msg);
-		if (csnet_fast(ret == 1)) {
-			csnet_sock_send(msg->sock, msg->data, msg->size);
-			csnet_msg_free(msg);
-		} else {
-			usleep(10);
-		}
-	}
-}
-
-void*
-csnet_el_in_loop(void* arg) {
+csnet_el_io_loop(void* arg) {
 	csnet_el_t* el = (csnet_el_t*)arg;
 	cs_lfqueue_register_thread(el->q);
 
@@ -135,7 +119,7 @@ csnet_el_in_loop(void* arg) {
 
 							csnet_msg_t* msg = csnet_msg_new(h.len, sock);
 							csnet_msg_append(msg, (char*)&h, h.len);
-							cs_lfqueue_enq(el->q, msg);
+							csnet_sendto(el->q, msg);
 							csnet_timer_update(el->timer, sid);
 						}
 

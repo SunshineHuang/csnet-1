@@ -1,4 +1,6 @@
 #include "csnet.h"
+#include "csnet_cond.h"
+#include "csnet_fast.h"
 #include "csnet_utils.h"
 #include "csnet_socket_api.h"
 
@@ -17,6 +19,7 @@
 #endif
 
 #define MAGIC_NUMBER 1024
+static csnet_cond_t cond = CSNET_COND_INITILIAZER;
 
 static void _do_accept(csnet_t* csnet, int* listenfd);
 
@@ -66,14 +69,32 @@ csnet_reset_module(csnet_t* csnet, csnet_module_t* module) {
 	}
 }
 
+void*
+csnet_dispatch_loop(void* arg) {
+	cs_lfqueue_t* q = (cs_lfqueue_t*)arg;
+	cs_lfqueue_register_thread(q);
+
+	while (1) {
+		csnet_msg_t* msg = NULL;
+		int ret = cs_lfqueue_deq(q, (void*)&msg);
+		if (csnet_fast(ret == 0)) {
+			csnet_sock_send(msg->sock, msg->data, msg->size);
+			csnet_msg_free(msg);
+		} else {
+			csnet_cond_wait(&cond);
+		}
+	}
+	return NULL;
+}
+
 void
 csnet_loop(csnet_t* csnet, int timeout) {
 	for (int i = 0; i < csnet->thread_count; i++) {
 		int cpuid;
-		pthread_t in_tid;
+		pthread_t tid;
 
-		if (pthread_create(&in_tid, NULL, csnet_el_in_loop, csnet->el_list[i]) < 0) {
-			LOG_FATAL(csnet->log, "create csnet_el_in_loop() error. pthread_create(): %s", strerror(errno));
+		if (pthread_create(&tid, NULL, csnet_el_io_loop, csnet->el_list[i]) < 0) {
+			LOG_FATAL(csnet->log, "create csnet_el_io_loop() error. pthread_create(): %s", strerror(errno));
 		}
 
 		if (csnet->cpu_cores > 4) {
@@ -83,16 +104,16 @@ csnet_loop(csnet_t* csnet, int timeout) {
 				cpuid = i + 4 - csnet->cpu_cores;
 			}
 
-			csnet_bind_to_cpu(in_tid, cpuid);
+			csnet_bind_to_cpu(tid, cpuid);
 		} else {
 			cpuid = i % csnet->cpu_cores;
-			csnet_bind_to_cpu(in_tid, cpuid);
+			csnet_bind_to_cpu(tid, cpuid);
 		}
 	}
 
 	pthread_t out_tid;
-	if (pthread_create(&out_tid, NULL, csnet_el_out_loop, csnet->q) < 0) {
-		LOG_FATAL(csnet->log, "create csnet_el_out_loop() error. pthread_create(): %s", strerror(errno));
+	if (pthread_create(&out_tid, NULL, csnet_dispatch_loop, csnet->q) < 0) {
+		LOG_FATAL(csnet->log, "create csnet_dispatch_loop() error. pthread_create(): %s", strerror(errno));
 	}
 	if (csnet->cpu_cores > 4) {
 		csnet_bind_to_cpu(out_tid, csnet->cpu_cores - 2);
@@ -138,6 +159,13 @@ csnet_free(csnet_t* csnet) {
 		csnet_el_free(csnet->el_list[i]);
 	}
 	free(csnet);
+}
+
+int
+csnet_sendto(cs_lfqueue_t* q, csnet_msg_t* msg) {
+	cs_lfqueue_enq(q, msg);
+	csnet_cond_signal_one(&cond);
+	return 0;
 }
 
 static inline void

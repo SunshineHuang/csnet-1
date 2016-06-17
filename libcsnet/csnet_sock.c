@@ -12,7 +12,7 @@
 #include <jemalloc/jemalloc.h>
 #endif
 
-#define READ_BUFFER_SIZE  64 * 1024
+#define READ_BUFFER_SIZE  (16 * 1024)
 
 csnet_sock_t*
 csnet_sock_new(int rsize) {

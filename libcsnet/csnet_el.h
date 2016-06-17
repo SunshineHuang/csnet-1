@@ -21,6 +21,5 @@ typedef struct csnet_el {
 csnet_el_t* csnet_el_new(int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q);
 void csnet_el_free(csnet_el_t*);
 int csnet_el_add_connection(csnet_el_t*, int fd);
-void* csnet_el_in_loop(void* arg);
-void* csnet_el_out_loop(void* arg);
+void* csnet_el_io_loop(void* arg);
 
