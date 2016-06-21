@@ -29,12 +29,12 @@ business_init(csnet_conntor_t* conntor, csnet_log_t* log, csnet_ctx_t* ctx, cs_l
 }
 
 void
-business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
-	LOG_DEBUG(LOG, "business_entry: cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
+business_entry(csnet_ss_t* ss, csnet_head_t* head, char* data, int data_len) {
+	LOG_DEBUG(LOG, "new so business_entry: cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
 		head->cmd, head->len, head->ctxid, data_len);
 
 	if (head->cmd == csnet_echo_msg_req) {
-		struct bmin_send_msg* bm = bmin_send_msg_new(sock, head);
+		struct bmin_send_msg* bm = bmin_send_msg_new(ss, head);
 		if (!bm) {
 			LOG_ERROR(LOG, "could not create bmin_send_msg");
 			csnet_module_ref_decrement(CONNTOR->module);
@@ -43,16 +43,16 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len)
 		int64_t ctxid = bm->ctxid;
 		if (csnet_ctx_insert(CTX, ctxid, bm, sizeof(*bm)) == 0) {
 			LOG_DEBUG(LOG, "insert bm ctxid: %d", ctxid);
-			if (bmin_send_msg_req(bm, sock, head, data, data_len) == -1) {
+			if (bmin_send_msg_req(bm, ss, head, data, data_len) == -1) {
 				LOG_ERROR(LOG, "bmin_send_msg_req() failed. ctxid: %d", ctxid);
 				csnet_ctx_delete(CTX, ctxid);
-				bmin_send_msg_err(bm, sock, head);
+				bmin_send_msg_err(bm, ss, head);
 				bmin_send_msg_free(bm);
 				csnet_module_ref_decrement(CONNTOR->module);
 			}
 		} else {
 			LOG_ERROR(LOG, "could not insert to CTX, ctxid: %ld", ctxid);
-			bmin_send_msg_err(bm, sock, head);
+			bmin_send_msg_err(bm, ss, head);
 			bmin_send_msg_free(bm);
 			csnet_module_ref_decrement(CONNTOR->module);
 		}

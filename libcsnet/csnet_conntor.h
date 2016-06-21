@@ -30,5 +30,5 @@ void csnet_conntor_reset_module(csnet_conntor_t*, csnet_module_t* module);
 void csnet_conntor_connect_servers(csnet_conntor_t*);
 void csnet_conntor_reconnect_servers(csnet_conntor_t*);
 void csnet_conntor_loop(csnet_conntor_t*);
-csnet_sock_t* csnet_conntor_get_sock(csnet_conntor_t*, csnet_server_type_t server_type);
+csnet_ss_t* csnet_conntor_get_ss(csnet_conntor_t*, csnet_server_type_t server_type);
 

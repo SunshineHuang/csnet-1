@@ -4,9 +4,9 @@
 #include <string.h>
 
 csnet_msg_t*
-csnet_msg_new(int size, csnet_sock_t* sock) {
+csnet_msg_new(int size, csnet_ss_t* ss) {
 	csnet_msg_t* m = calloc(1, sizeof(*m) + size);
-	m->sock = sock;
+	m->ss = ss;
 	m->size = size;
 	m->offset = 0;
 	return m;

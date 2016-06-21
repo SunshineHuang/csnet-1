@@ -65,8 +65,8 @@ _heartbeat(csnet_conntor_t* conntor) {
 				.len = HEAD_LEN
 			};
 
-			csnet_sock_t* sock = csnet_sockset_get(conntor->sockset, sid);
-			csnet_msg_t* msg = csnet_msg_new(h.len, sock);
+			csnet_ss_t* ss = csnet_sockset_get(conntor->sockset, sid);
+			csnet_msg_t* msg = csnet_msg_new(h.len, ss);
 			csnet_msg_append(msg, (char*)&h, h.len);
 			csnet_sendto(conntor->q, msg);
 			head = head->next;
@@ -85,21 +85,21 @@ csnet_conntor_io_loop(void* arg) {
 		int ready = csnet_epoller_wait(conntor->epoller, 1000);
 		for (int i = 0; i < ready; ++i) {
 			csnet_epoller_event_t* ee;
-			csnet_sock_t* sock;
+			csnet_ss_t* ss;
 			unsigned int sid;
 			int fd;
 
 			ee = csnet_epoller_get_event(conntor->epoller, i);
 			sid = csnet_epoller_event_sid(ee);
-			sock = csnet_sockset_get(conntor->sockset, sid);
-			fd = sock->fd;
+			ss = csnet_sockset_get(conntor->sockset, sid);
+			fd = ss->ss.sock->fd;
 
 			if (csnet_fast(csnet_epoller_event_is_readable(ee))) {
-				int nrecv = csnet_sock_recv(sock);
+				int nrecv = csnet_ss_recv(ss);
 				if (csnet_fast(nrecv > 0)) {
 					while (1) {
-						char* data = csnet_rb_data(sock->rb);
-						unsigned int data_len = sock->rb->data_len;
+						char* data = csnet_rb_data(ss->ss.sock->rb);
+						unsigned int data_len = ss->ss.sock->rb->data_len;
 						csnet_head_t* head = (csnet_head_t*)data;
 
 						if (data_len < HEAD_LEN) {
@@ -109,7 +109,7 @@ csnet_conntor_io_loop(void* arg) {
 						if (head->len < HEAD_LEN || head->len > MAX_LEN) {
 							LOG_ERROR(conntor->log, "Incorrect package from %d. head len: %d", fd, head->len);
 							csnet_epoller_del(conntor->epoller, fd, sid);
-							csnet_sockset_reset_sock(conntor->sockset, sid);
+							csnet_sockset_reset_ss(conntor->sockset, sid);
 							csnet_timer_remove(conntor->timer, sid);
 							struct server_node* server_node = cs_lfhash_search(conntor->hashtbl, sid);
 
@@ -130,13 +130,13 @@ csnet_conntor_io_loop(void* arg) {
 
 						if (csnet_fast(head->cmd != CSNET_HEARTBEAT_ACK)) {
 							csnet_module_ref_increment(conntor->module);
-							csnet_module_entry(conntor->module, sock, head, data + HEAD_LEN,
+							csnet_module_entry(conntor->module, ss, head, data + HEAD_LEN,
 									head->len - HEAD_LEN);
 						} else {
 							/* Do nothing when recv CSNET_HEARTBEAT_ACK */
 						}
 
-						if (csnet_rb_seek(sock->rb, head->len) == 0) {
+						if (csnet_rb_seek(ss->ss.sock->rb, head->len) == 0) {
 							break;
 						}
 					}
@@ -146,7 +146,7 @@ csnet_conntor_io_loop(void* arg) {
 					csnet_epoller_mod_read(conntor->epoller, fd, sid);
 				} else {
 					csnet_epoller_del(conntor->epoller, fd, sid);
-					csnet_sockset_reset_sock(conntor->sockset, sid);
+					csnet_sockset_reset_ss(conntor->sockset, sid);
 					csnet_timer_remove(conntor->timer, sid);
 					struct server_node* server_node = cs_lfhash_search(conntor->hashtbl, sid);
 
@@ -273,7 +273,7 @@ csnet_conntor_new(int connect_timeout, const char* config, csnet_log_t* log, csn
 	conntor->hashtbl = cs_lfhash_new(71);
 	conntor->log = log;
 	_load_nodes(conntor, config);
-	conntor->sockset = csnet_sockset_new(1024, 0x0);
+	conntor->sockset = csnet_sockset_new(1024, 0x0, sock_type, NULL, NULL);
 	conntor->timer = csnet_timer_new(connect_timeout, 709);
 	conntor->module = module;
 	conntor->q = q;
@@ -355,8 +355,8 @@ csnet_conntor_reconnect_servers(csnet_conntor_t* conntor) {
 	}
 }
 
-csnet_sock_t*
-csnet_conntor_get_sock(csnet_conntor_t* conntor, csnet_server_type_t server_type) {
+csnet_ss_t*
+csnet_conntor_get_ss(csnet_conntor_t* conntor, csnet_server_type_t server_type) {
 	struct slot* slot = conntor->slots[server_type % SLOT_SIZE];
 	struct server_node* server_node = slot->curr_node->data;
 

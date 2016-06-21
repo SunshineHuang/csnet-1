@@ -24,7 +24,7 @@
 static void csnet_el_check_timeout(csnet_el_t* el);
 
 csnet_el_t*
-csnet_el_new(int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q) {
+csnet_el_new(int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q, int type, X509* x, EVP_PKEY* pkey) {
 	csnet_el_t* el = calloc(1, sizeof(*el));
 	if (!el) {
 		csnet_oom(sizeof(*el));
@@ -33,7 +33,7 @@ csnet_el_new(int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t
 	el->max_conn = max_conn;
 	el->cur_conn = 0;
 	el->epoller = csnet_epoller_new(max_conn);
-	el->sockset = csnet_sockset_new(max_conn, 0xab);
+	el->sockset = csnet_sockset_new(max_conn, 0xab, type, x, pkey);
 	el->timer = csnet_timer_new(connect_timeout, 709);
 	el->log = log;
 	el->module = module;
@@ -57,6 +57,24 @@ csnet_el_add_connection(csnet_el_t* el, int fd) {
 	return 0;
 }
 
+int
+csnet_el_s_add_connection(csnet_el_t* el, int fd) {
+	unsigned int sid;
+	if (csnet_slow(el->cur_conn++ > el->max_conn)) {
+		LOG_WARNING(el->log, "Too much connections, closing socket %d", fd);
+		return -1;
+	}
+
+	sid = csnet_sockset_put(el->sockset, fd);
+	csnet_ss_t* ss = csnet_sockset_get(el->sockset, sid);
+	if (csnet_ssock_accept(ss->ss.ssock) == 0) {
+		csnet_epoller_add(el->epoller, fd, sid);
+		csnet_timer_insert(el->timer, fd, sid);
+		return 0;
+	}
+	return -1;
+}
+
 void*
 csnet_el_io_loop(void* arg) {
 	csnet_el_t* el = (csnet_el_t*)arg;
@@ -66,21 +84,21 @@ csnet_el_io_loop(void* arg) {
 		int ready = csnet_epoller_wait(el->epoller, 1000);
 		for (int i = 0; i < ready; ++i) {
 			csnet_epoller_event_t* ee;
-			csnet_sock_t* sock;
+			csnet_ss_t* ss;
 			unsigned int sid;
 			int fd;
 
 			ee = csnet_epoller_get_event(el->epoller, i);
 			sid = csnet_epoller_event_sid(ee);
-			sock = csnet_sockset_get(el->sockset, sid);
-			fd = sock->fd;
+			ss = csnet_sockset_get(el->sockset, sid);
+			fd = csnet_ss_fd(ss);
 
 			if (csnet_fast(csnet_epoller_event_is_readable(ee))) {
-				int nrecv = csnet_sock_recv(sock);
+				int nrecv = csnet_ss_recv(ss);
 				if (csnet_fast(nrecv > 0)) {
 					while (1) {
-						char* data = csnet_rb_data(sock->rb);
-						unsigned int data_len = sock->rb->data_len;
+						char* data = csnet_ss_data(ss);
+						unsigned int data_len = csnet_ss_data_len(ss);
 						csnet_head_t* head = (csnet_head_t*)data;
 
 						if (data_len < HEAD_LEN) {
@@ -91,7 +109,7 @@ csnet_el_io_loop(void* arg) {
 							LOG_ERROR(el->log, "incorrect package from %d. head len: %d", fd,
 								  head->len);
 							csnet_epoller_del(el->epoller, fd, sid);
-							csnet_sockset_reset_sock(el->sockset, sid);
+							csnet_sockset_reset_ss(el->sockset, sid);
 							csnet_timer_remove(el->timer, sid);
 							el->cur_conn--;
 							break;
@@ -103,7 +121,7 @@ csnet_el_io_loop(void* arg) {
 
 						if (csnet_fast(head->cmd != CSNET_HEARTBEAT_SYN)) {
 							csnet_module_ref_increment(el->module);
-							csnet_module_entry(el->module, sock, head, data + HEAD_LEN,
+							csnet_module_entry(el->module, ss, head, data + HEAD_LEN,
 									head->len - HEAD_LEN);
 						} else {
 							LOG_INFO(el->log, "recv heartbeat syn from socket[%d], sid[%d]", fd, sid);
@@ -117,13 +135,13 @@ csnet_el_io_loop(void* arg) {
 								.len = HEAD_LEN
 							};
 
-							csnet_msg_t* msg = csnet_msg_new(h.len, sock);
+							csnet_msg_t* msg = csnet_msg_new(h.len, ss);
 							csnet_msg_append(msg, (char*)&h, h.len);
 							csnet_sendto(el->q, msg);
 							csnet_timer_update(el->timer, sid);
 						}
 
-						if (csnet_rb_seek(sock->rb, head->len) == 0) {
+						if (csnet_ss_seek(ss, head->len) == 0) {
 							break;
 						}
 					}
@@ -134,7 +152,7 @@ csnet_el_io_loop(void* arg) {
 					 * after remote peer send a large amout of data, we can still read() data
 					 * from this socket. */
 					csnet_epoller_del(el->epoller, fd, sid);
-					csnet_sockset_reset_sock(el->sockset, sid);
+					csnet_sockset_reset_ss(el->sockset, sid);
 					csnet_timer_remove(el->timer, sid);
 					el->cur_conn--;
 				}
@@ -185,10 +203,11 @@ csnet_el_check_timeout(csnet_el_t* el) {
 			 * If we do this, what's the right timing to close this connection? */
 
 			unsigned int sid = head->key;
-			csnet_sock_t* sock = csnet_sockset_get(el->sockset, sid);
-			LOG_WARNING(el->log, "sid[%d] timeout, closing socket[%d]", sid, sock->fd);
-			csnet_epoller_del(el->epoller, sock->fd, sid);
-			csnet_sockset_reset_sock(el->sockset, sid);
+			csnet_ss_t* ss = csnet_sockset_get(el->sockset, sid);
+			int fd = csnet_ss_fd(ss);
+			LOG_WARNING(el->log, "sid[%d] timeout, closing socket[%d]", sid, fd);
+			csnet_epoller_del(el->epoller, fd, sid);
+			csnet_sockset_reset_ss(el->sockset, sid);
 			el->cur_conn--;
 			csnet_timer_remove(el->timer, sid);
 			head = head->next;

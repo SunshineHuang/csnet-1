@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 	csnet_module_load(module, "./business_module.so");
 	csnet_conntor_connect_servers(conntor);
 	csnet_conntor_loop(conntor);
-	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), logger, module, q);
+	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), logger, module, q, sock_type, NULL, NULL);
 	hotpatch = csnet_hotpatch_new(q, csnet, logger, ctx, conntor, module);
 	LOG_INFO(logger, "Server start ok ...");
 	csnet_loop(csnet, -1);

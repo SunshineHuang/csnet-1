@@ -1,5 +1,5 @@
 include ../../public.mk
-VPATH = ./: ../../src/
+VPATH = ./: ../../lib/
 objs = int_hash.o timer.o
 target = test
 all: $(target)

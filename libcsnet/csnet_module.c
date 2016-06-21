@@ -57,8 +57,8 @@ csnet_module_ref_decrement(csnet_module_t* m) {
 }
 
 void
-csnet_module_entry(csnet_module_t* m, csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
-	m->business_entry(sock, head, data, data_len);
+csnet_module_entry(csnet_module_t* m, csnet_ss_t* ss, csnet_head_t* head, char* data, int data_len) {
+	m->business_entry(ss, head, data, data_len);
 }
 
 void

@@ -1,10 +1,4 @@
-#include "business_module.h"
-#include "csnet_socket_api.h"
-#include "csnet_sock.h"
-#include "csnet_head.h"
-#include "csnet_ctx.h"
-#include "cs-lfqueue.h"
-
+#include "libcsnet.h"
 /*
  * Business header
  */
@@ -42,16 +36,16 @@ business_init(csnet_conntor_t* conntor, csnet_log_t* log, csnet_ctx_t* ctx, cs_l
 }
 
 void
-business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len) {
+business_entry(csnet_ss_t* ss, csnet_head_t* head, char* data, int data_len) {
 	LOG_INFO(LOG, "business_entry cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
 		head->cmd, head->len, head->ctxid, data_len);
 
 	if (head->cmd == csnet_echo_msg_req) {
-		struct bmin_send_msg* bm = bmin_send_msg_new(sock, head);
+		struct bmin_send_msg* bm = bmin_send_msg_new(ss, head);
 		if (!bm) {
 			return;
 		}
-		long ctxid = bmin_send_msg_req(bm, sock, head, data, data_len);
+		long ctxid = bmin_send_msg_req(bm, ss, head, data, data_len);
 		if (ctxid == 0) {
 			bmin_send_msg_free(bm);
 		} else {
@@ -59,7 +53,7 @@ business_entry(csnet_sock_t* sock, csnet_head_t* head, char* data, int data_len)
 				LOG_DEBUG(LOG, "insert bm to CTX with ctxid: %ld", ctxid);
 			} else {
 				LOG_ERROR(LOG, "could not insert to CTX. ctxid: %ld", ctxid);
-				bmin_send_msg_err(bm, sock, head);
+				bmin_send_msg_err(bm, ss, head);
 				bmin_send_msg_free(bm);
 			}
 		}

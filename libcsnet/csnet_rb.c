@@ -95,12 +95,12 @@ csnet_rb_seek(csnet_rb_t* rb, unsigned int len) {
 	return rb->data_len;
 }
 
-char*
+inline char*
 csnet_rb_data(csnet_rb_t* rb) {
 	return rb->buffer + rb->seek;
 }
 
-unsigned int
+inline unsigned int
 csnet_rb_data_len(csnet_rb_t* rb) {
 	return rb->data_len;
 }

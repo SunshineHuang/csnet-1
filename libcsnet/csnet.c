@@ -24,12 +24,43 @@ static csnet_cond_t cond = CSNET_COND_INITILIAZER;
 static void _do_accept(csnet_t* csnet, int* listenfd);
 
 csnet_t*
-csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q) {
-	csnet_t* csnet = calloc(1, sizeof(*csnet) + thread_count * sizeof(csnet_el_t*));
+csnet_new(int port, int thread_count, int max_conn, int connect_timeout,
+	csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q,
+	int type, const char* cert, const char* pkey)
+{
+	if (type != sock_type && type != ssock_type) {
+		LOG_FATAL(log, "type must be sock_type or ssock_type");
+	}
+
+	csnet_t* csnet;
+	csnet = calloc(1, sizeof(*csnet) + thread_count * sizeof(csnet_el_t*));
 	if (!csnet) {
 		csnet_oom(sizeof(*csnet));
 	}
+	if (type == sock_type) {
+		csnet->x = NULL;
+		csnet->pkey = NULL;
+	} else {
+		csnet->x = X509_new();
+		csnet->pkey = EVP_PKEY_new();
+		if (!csnet->x) {
+			LOG_FATAL(log, "could not create X509");
+		}
+		if (!csnet->pkey) {
+			LOG_FATAL(log, "could not create private key");
+		}
+		FILE* f1 = fopen(cert, "r");
+		FILE* f2 = fopen(pkey, "r");
+		if (!f1 || !f2) {
+			LOG_FATAL(log, "could not open file: %s or %s", cert, pkey);
+		}
+		PEM_read_X509(f1, &csnet->x, NULL, NULL);
+		PEM_read_PrivateKey(f2, &csnet->pkey, NULL, NULL);
+		fclose(f1);
+		fclose(f2);
+	}
 
+	csnet->type = type;
 	csnet->listenfd = listen_port(port);
 	if (csnet->listenfd == -1) {
 		LOG_FATAL(log, "epoll_create(): %s", strerror(errno));
@@ -54,7 +85,7 @@ csnet_new(int port, int thread_count, int max_conn, int connect_timeout, csnet_l
 
 	for (int i = 0; i < thread_count; i++) {
 		int count = max_conn / thread_count + 1;
-		csnet->el_list[i] = csnet_el_new(count, connect_timeout, log, module, q);
+		csnet->el_list[i] = csnet_el_new(count, connect_timeout, log, module, q, type, csnet->x, csnet->pkey);
 	}
 
 	csnet->log = log;
@@ -78,10 +109,10 @@ csnet_dispatch_loop(void* arg) {
 		csnet_msg_t* msg = NULL;
 		int ret = cs_lfqueue_deq(q, (void*)&msg);
 		if (csnet_fast(ret == 0)) {
-			csnet_sock_send(msg->sock, msg->data, msg->size);
+			csnet_ss_send(msg->ss, msg->data, msg->size);
 			csnet_msg_free(msg);
 		} else {
-			csnet_cond_wait(&cond);
+			csnet_cond_wait_sec(&cond, 1);
 		}
 	}
 	return NULL;
@@ -187,9 +218,16 @@ _do_accept(csnet_t* csnet, int* listenfd) {
 				continue;
 			}
 
-			if (csnet_el_add_connection(csnet->el_list[fd % csnet->thread_count], fd) == -1) {
-				close(fd);
-				return;
+			if (csnet->type == sock_type) {
+				if (csnet_el_add_connection(csnet->el_list[fd % csnet->thread_count], fd) == -1) {
+					close(fd);
+					return;
+				}
+			} else {
+				if (csnet_el_s_add_connection(csnet->el_list[fd % csnet->thread_count], fd) == -1) {
+					close(fd);
+					return;
+				}
 			}
 		} else {
 			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {

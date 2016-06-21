@@ -1,12 +1,12 @@
 #pragma once
 
 #include "csnet_head.h"
-#include "csnet_sock.h"
+#include "csnet_ss.h"
 
 #include <stdint.h>
 
 typedef int64_t (*rsp_cb) (void* b, csnet_head_t* head, char* body, int body_len);
-typedef void (*err_cb) (void* b, csnet_sock_t* sock, csnet_head_t* head);
+typedef void (*err_cb) (void* b, csnet_ss_t* ss, csnet_head_t* head);
 typedef int64_t (*timeout_cb) (void* b);
 
 typedef struct business_ops {
