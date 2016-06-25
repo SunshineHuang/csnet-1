@@ -90,7 +90,7 @@ csnet_sockset_reset_ss(csnet_sockset_t* set, unsigned int sid) {
 		csnet_ss_t* ss = set->set[sid % set->max_conn];
 		if (ss->ss.ssock->sid == sid) {
 			close(ss->ss.ssock->fd);
-			csnet_ssock_reset(ss->ss.ssock);
+			csnet_ssock_reset(ss->ss.ssock, set->x, set->pkey);
 		}
 	}
 }

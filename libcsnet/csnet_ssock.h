@@ -22,6 +22,7 @@
 #define CSNET_TLSV1_2_C  14
 
 typedef struct csnet_ssock {
+	int proto;
 	int fd;
 	unsigned int sid;
 	csnet_rb_t* rb;
@@ -44,5 +45,5 @@ int csnet_ssock_recv(csnet_ssock_t* ssock);
 int csnet_ssock_recv_buff(csnet_ssock_t* ssock, char* buf, int len);
 
 void csnet_ssock_set_fd(csnet_ssock_t* ssock, int fd);
-void csnet_ssock_reset(csnet_ssock_t* ssock);
+void csnet_ssock_reset(csnet_ssock_t* ss, X509* x, EVP_PKEY* pkey);
 

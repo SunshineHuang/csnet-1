@@ -7,48 +7,44 @@
 #include <string.h>
 #include <openssl/err.h>
 
+static const SSL_METHOD* protocol_methods[15];
+
 void
 csnet_ssock_env_init(void) {
 	SSL_library_init();  /* openssl's doc say that this api always return '1',
 				so we can discard the return value */
 	OpenSSL_add_all_algorithms();
 	SSL_load_error_strings();
+	protocol_methods[0] = SSLv23_method();
+	protocol_methods[1] = SSLv23_server_method();
+	protocol_methods[2] = SSLv23_client_method();
+	protocol_methods[3] = SSLv3_method();
+	protocol_methods[4] = SSLv3_server_method();
+	protocol_methods[5] = SSLv3_client_method();
+	protocol_methods[6] = TLSv1_method();
+	protocol_methods[7] = TLSv1_server_method();
+	protocol_methods[8] = TLSv1_client_method();
+	protocol_methods[9] = TLSv1_1_method();
+	protocol_methods[10] = TLSv1_1_server_method();
+	protocol_methods[11] = TLSv1_1_client_method();
+	protocol_methods[12] = TLSv1_2_method();
+	protocol_methods[13] = TLSv1_2_server_method();
+	protocol_methods[14] = TLSv1_2_client_method();
 }
 
 csnet_ssock_t*
 csnet_ssock_new(int proto) {
-	const SSL_METHOD* method;
-	csnet_ssock_t* ss = calloc(1, sizeof(*ss));
-	ss->fd = 0;
-	ss->sid = 0;
-	ss->rb = csnet_rb_new(8 * 1024);
-
-	switch (proto) {
-	case CSNET_SSLV23:    method = SSLv23_method();         break;
-	case CSNET_SSLV23_S:  method = SSLv23_server_method();  break;
-	case CSNET_SSLV23_C:  method = SSLv23_client_method();  break;
-	case CSNET_SSLV3:     method = SSLv3_method();          break;
-	case CSNET_SSLV3_S:   method = SSLv3_server_method();   break;
-	case CSNET_SSLV3_C:   method = SSLv3_client_method();   break;
-	case CSNET_TLSV1:     method = TLSv1_method();          break;
-	case CSNET_TLSV1_S:   method = TLSv1_server_method();   break;
-	case CSNET_TLSV1_C:   method = TLSv1_client_method();   break;
-	case CSNET_TLSV1_1:   method = TLSv1_1_method();        break;
-	case CSNET_TLSV1_1_S: method = TLSv1_1_server_method(); break;
-	case CSNET_TLSV1_1_C: method = TLSv1_1_client_method(); break;
-	case CSNET_TLSV1_2:   method = TLSv1_2_method();        break;
-	case CSNET_TLSV1_2_S: method = TLSv1_2_server_method(); break;
-	case CSNET_TLSV1_2_C: method = TLSv1_2_client_method(); break;
-	default: DEBUG("unknown protocol"); method = NULL;   break;
-	}
-
-	if (!method) {
-		csnet_rb_free(ss->rb);
-		free(ss);
+	if (proto > CSNET_TLSV1_2_C || proto < CSNET_SSLV23) {
+		DEBUG("unknown protocol");
 		return NULL;
 	}
 
-	ss->ctx = SSL_CTX_new(method);
+	csnet_ssock_t* ss = calloc(1, sizeof(*ss));
+	ss->proto = proto;
+	ss->fd = 0;
+	ss->sid = 0;
+	ss->rb = csnet_rb_new(8 * 1024);
+	ss->ctx = SSL_CTX_new(protocol_methods[proto]);
 	ss->ssl = SSL_new(ss->ctx);
 
 	return ss;
@@ -56,39 +52,17 @@ csnet_ssock_new(int proto) {
 
 csnet_ssock_t*
 csnet_ssock_new3(int proto, X509* x, EVP_PKEY* pkey) {
-	const SSL_METHOD* method;
-	csnet_ssock_t* ss = calloc(1, sizeof(*ss));
-	ss->fd = 0;
-	ss->sid = 0;
-	ss->rb = csnet_rb_new(8 * 1024);
-
-
-	switch (proto) {
-	case CSNET_SSLV23:    method = SSLv23_method();         break;
-	case CSNET_SSLV23_S:  method = SSLv23_server_method();  break;
-	case CSNET_SSLV23_C:  method = SSLv23_client_method();  break;
-	case CSNET_SSLV3:     method = SSLv3_method();          break;
-	case CSNET_SSLV3_S:   method = SSLv3_server_method();   break;
-	case CSNET_SSLV3_C:   method = SSLv3_client_method();   break;
-	case CSNET_TLSV1:     method = TLSv1_method();          break;
-	case CSNET_TLSV1_S:   method = TLSv1_server_method();   break;
-	case CSNET_TLSV1_C:   method = TLSv1_client_method();   break;
-	case CSNET_TLSV1_1:   method = TLSv1_1_method();        break;
-	case CSNET_TLSV1_1_S: method = TLSv1_1_server_method(); break;
-	case CSNET_TLSV1_1_C: method = TLSv1_1_client_method(); break;
-	case CSNET_TLSV1_2:   method = TLSv1_2_method();        break;
-	case CSNET_TLSV1_2_S: method = TLSv1_2_server_method(); break;
-	case CSNET_TLSV1_2_C: method = TLSv1_2_client_method(); break;
-	default: DEBUG("unknown protocol"); method = NULL;   break;
-	}
-
-	if (!method) {
-		csnet_rb_free(ss->rb);
-		free(ss);
+	if (proto > CSNET_TLSV1_2_C || proto < CSNET_SSLV23) {
+		DEBUG("unknown protocol");
 		return NULL;
 	}
 
-	ss->ctx = SSL_CTX_new(method);
+	csnet_ssock_t* ss = calloc(1, sizeof(*ss));
+	ss->proto = proto;
+	ss->fd = 0;
+	ss->sid = 0;
+	ss->rb = csnet_rb_new(8 * 1024);
+	ss->ctx = SSL_CTX_new(protocol_methods[proto]);
 	ss->ssl = SSL_new(ss->ctx);
 	SSL_use_certificate(ss->ssl, x);
 	SSL_use_PrivateKey(ss->ssl, pkey);
@@ -245,14 +219,16 @@ again:
 }
 
 void
-csnet_ssock_reset(csnet_ssock_t* ss) {
+csnet_ssock_reset(csnet_ssock_t* ss, X509* x, EVP_PKEY* pkey) {
 	ss->sid = 0;
 	close(ss->fd);
 	ss->fd = 0;
 	csnet_rb_reset(ss->rb);
 	SSL_CTX_free(ss->ctx);
 	SSL_free(ss->ssl);
-	ss->ctx = SSL_CTX_new(TLSv1_method());
+	ss->ctx = SSL_CTX_new(protocol_methods[ss->proto]);
 	ss->ssl = SSL_new(ss->ctx);
+	SSL_use_certificate(ss->ssl, x);
+	SSL_use_PrivateKey(ss->ssl, pkey);
 }
 
