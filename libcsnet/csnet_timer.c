@@ -94,6 +94,7 @@ csnet_timer_remove(csnet_timer_t* timer, unsigned int timerid) {
 	if (timer_node) {
 		cs_lfhash_delete(timer->wheels_tbl[index], timerid);
 		cs_lfhash_delete(timer->which_wheel_tbl, timerid);
+		free(timer_node);
 	}
 }
 
