@@ -21,7 +21,8 @@
 #include <jemalloc/jemalloc.h>
 #endif
 
-static void csnet_el_check_timeout(csnet_el_t* el);
+static void check_timeout(csnet_el_t* el);
+static void readable_event(csnet_el_t* el, csnet_ss_t* ss, unsigned int sid, int fd);
 
 csnet_el_t*
 csnet_el_new(int max_conn, int connect_timeout, csnet_log_t* log, csnet_module_t* module, cs_lfqueue_t* q, int type, X509* x, EVP_PKEY* pkey) {
@@ -94,68 +95,7 @@ csnet_el_io_loop(void* arg) {
 			fd = csnet_ss_fd(ss);
 
 			if (csnet_fast(csnet_epoller_event_is_readable(ee))) {
-				int nrecv = csnet_ss_recv(ss);
-				if (csnet_fast(nrecv > 0)) {
-					while (1) {
-						char* data = csnet_ss_data(ss);
-						unsigned int data_len = csnet_ss_data_len(ss);
-						csnet_head_t* head = (csnet_head_t*)data;
-
-						if (data_len < HEAD_LEN) {
-						        break;
-						}
-
-						if (head->len < HEAD_LEN) {
-							LOG_ERROR(el->log, "incorrect package from %d. head len: %d", fd,
-								  head->len);
-							csnet_epoller_del(el->epoller, fd, sid);
-							csnet_sockset_reset_ss(el->sockset, sid);
-							csnet_timer_remove(el->timer, sid);
-							el->cur_conn--;
-							break;
-						}
-
-						if (data_len < head->len) {
-							break;
-						}
-
-						if (csnet_fast(head->cmd != CSNET_HEARTBEAT_SYN)) {
-							csnet_module_ref_increment(el->module);
-							csnet_module_entry(el->module, ss, head, data + HEAD_LEN,
-									head->len - HEAD_LEN);
-						} else {
-							LOG_INFO(el->log, "recv heartbeat syn from socket[%d], sid[%d]", fd, sid);
-							csnet_head_t h = {
-								.version = head->version,
-								.compress = head->compress,
-								.cmd = CSNET_HEARTBEAT_ACK,
-								.status = head->status,
-								.ctxid = head->ctxid,
-								.sid = head->sid,
-								.len = HEAD_LEN
-							};
-
-							csnet_msg_t* msg = csnet_msg_new(h.len, ss);
-							csnet_msg_append(msg, (char*)&h, h.len);
-							csnet_sendto(el->q, msg);
-							csnet_timer_update(el->timer, sid);
-						}
-
-						if (csnet_ss_seek(ss, head->len) == 0) {
-							break;
-						}
-					}
-
-					csnet_epoller_mod_rw(el->epoller, fd, sid);
-				} else {
-					/* We clear a socket here. Because of if remote peer close immediately
-					 * after remote peer send a large amout of data, we can still read() data
-					 * from this socket. */
-					csnet_epoller_del(el->epoller, fd, sid);
-					csnet_sockset_reset_ss(el->sockset, sid);
-					csnet_timer_remove(el->timer, sid);
-					el->cur_conn--;
-				}
+				readable_event(el, ss, sid, fd);
 			}
 
 			if (csnet_epoller_event_is_error(ee)) {
@@ -164,10 +104,10 @@ csnet_el_io_loop(void* arg) {
 				 * here but LOGGING. */
 				LOG_WARNING(el->log, "EPOLLERR on socket: %d. ", fd);
 			}
-		} /* end of for (ready) */
+		}
 
 		/* Check the connection which has timeout. */
-		csnet_el_check_timeout(el);
+		check_timeout(el);
 
 		if (ready == -1) {
 			if (errno == EINTR) {
@@ -190,8 +130,73 @@ csnet_el_free(csnet_el_t* el) {
 	csnet_timer_free(el->timer);
 }
 
+static void
+readable_event(csnet_el_t* el, csnet_ss_t* ss, unsigned int sid, int fd) {
+	int nrecv = csnet_ss_recv(ss);
+	if (csnet_fast(nrecv > 0)) {
+		while (1) {
+			char* data = csnet_ss_data(ss);
+			unsigned int data_len = csnet_ss_data_len(ss);
+			csnet_head_t* head = (csnet_head_t*)data;
+
+			if (data_len < HEAD_LEN) {
+			        break;
+			}
+
+			if (head->len < HEAD_LEN) {
+				LOG_ERROR(el->log, "incorrect package from %d. head len: %d", fd, head->len);
+				csnet_epoller_del(el->epoller, fd, sid);
+				csnet_sockset_reset_ss(el->sockset, sid);
+				csnet_timer_remove(el->timer, sid);
+				el->cur_conn--;
+				break;
+			}
+
+			if (data_len < head->len) {
+				break;
+			}
+
+			if (csnet_fast(head->cmd != CSNET_HEARTBEAT_SYN)) {
+				csnet_module_ref_increment(el->module);
+				csnet_module_entry(el->module, ss, head, data + HEAD_LEN, head->len - HEAD_LEN);
+			} else {
+				LOG_INFO(el->log, "recv heartbeat syn from socket[%d], sid[%d]", fd, sid);
+				csnet_head_t h = {
+					.version = head->version,
+					.compress = head->compress,
+					.cmd = CSNET_HEARTBEAT_ACK,
+					.status = head->status,
+					.ctxid = head->ctxid,
+					.sid = head->sid,
+					.len = HEAD_LEN
+				};
+
+				csnet_msg_t* msg = csnet_msg_new(h.len, ss);
+				csnet_msg_append(msg, (char*)&h, h.len);
+				csnet_sendto(el->q, msg);
+				csnet_timer_update(el->timer, sid);
+			}
+
+			if (csnet_ss_seek(ss, head->len) == 0) {
+				break;
+			}
+		}
+
+		csnet_epoller_mod_rw(el->epoller, fd, sid);
+	} else {
+		/* We clear a socket here. Because of if remote peer close immediately
+		 * after remote peer send a large amout of data, we can still read() data
+		 * from this socket. */
+		LOG_WARNING(el->log, "remote peer socket: %d, sid: %u closed.", fd, sid);
+		csnet_epoller_del(el->epoller, fd, sid);
+		csnet_sockset_reset_ss(el->sockset, sid);
+		csnet_timer_remove(el->timer, sid);
+		el->cur_conn--;
+	}
+}
+
 static inline void
-csnet_el_check_timeout(csnet_el_t* el) {
+check_timeout(csnet_el_t* el) {
 	int expired_wheel = csnet_timer_book_keeping(el->timer);
 	if (expired_wheel > -1) {
 		cs_lfhash_t* hashtbl = el->timer->wheels_tbl[expired_wheel];

@@ -31,7 +31,6 @@ bmin_send_msg_req(void* b, csnet_ss_t* ss, csnet_head_t* head, char* data, int d
 	csnet_unpack_init(&unpack, data, data_len);
 
 	const char* msg = csnet_unpack_getstr(&unpack);
-	LOG_ERROR(LOG, "%s", msg);
 
 	csnet_head_t h = {
 		.version = head->version,

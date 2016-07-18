@@ -1,4 +1,4 @@
-subdirs = edge-module-example
+subdirs = edge-module-example service-lookup
  
 target:
 	for dir in $(subdirs); do \

@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 	char* logfile;
 	char* logsize;
 	char* loglevel;
-	char* port;
+	char* myport;
 	char* maxconn;
 	char* threadcount;
 	char* server_connect_timeout;
@@ -97,15 +97,15 @@ int main(int argc, char** argv)
 		 return -1;
 	}
 
-	port = csnet_config_find(config, "port", strlen("port"));
+	myport = csnet_config_find(config, "myport", strlen("myport"));
 	maxconn = csnet_config_find(config, "maxconn", strlen("maxconn"));
 	threadcount = csnet_config_find(config, "threadcount", strlen("threadcount"));
 	server_connect_timeout = csnet_config_find(config, "server_connect_timeout", strlen("server_connect_timeout"));
 	client_connect_timeout = csnet_config_find(config, "client_connect_timeout", strlen("client_connect_timeout"));
 	business_timeout = csnet_config_find(config, "business_timeout", strlen("business_timeout"));
 
-	if (!port) {
-		LOG_FATAL(logger, "could not find `port`!");
+	if (!myport) {
+		LOG_FATAL(logger, "could not find `myport`!");
 	}
 
 	if (!maxconn) {
@@ -131,12 +131,12 @@ int main(int argc, char** argv)
  	q = cs_lfqueue_new();
 	ctx = csnet_ctx_new(CTX_SIZE, atoi(business_timeout), q);
 	module = csnet_module_new();
-	conntor = csnet_conntor_new(atoi(client_connect_timeout), conf_file, logger, module, q);
+	conntor = csnet_conntor_new(atoi(client_connect_timeout), config, logger, module, q);
 	csnet_module_init(module, conntor, logger, ctx, q);
 	csnet_module_load(module, "./business_module.so");
 	csnet_conntor_connect_servers(conntor);
 	csnet_conntor_loop(conntor);
-	csnet = csnet_new(atoi(port), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), logger, module, q, sock_type, NULL, NULL);
+	csnet = csnet_new(atoi(myport), atoi(threadcount), atoi(maxconn), atoi(server_connect_timeout), logger, module, q, sock_type, NULL, NULL);
 	hotpatch = csnet_hotpatch_new(q, csnet, logger, ctx, conntor, module);
 	LOG_INFO(logger, "Server start ok ...");
 	csnet_loop(csnet, -1);
