@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 cs_sl_node_t*
-cs_sl_node_new(int data) {
+cs_sl_node_new(void* data) {
 	cs_sl_node_t* node = calloc(1, sizeof(*node));
 	node->data = data;
 	node->next = NULL;
@@ -25,22 +25,23 @@ cs_slist_new() {
 
 void
 cs_slist_free(cs_slist_t* l) {
-	cs_sl_node_t* head = l->head;
-	while (head) {
-		cs_sl_node_t* tmp = head->next;
-		cs_sl_node_free(head);
-		head = tmp;
+	cs_sl_node_t* curr = l->head;
+	while (curr) {
+		cs_sl_node_t* tmp = curr->next;
+		free(curr->data);
+		cs_sl_node_free(curr);
+		curr = tmp;
 	}
 	free(l);
 }
 
 cs_sl_node_t*
-cs_slist_search(cs_slist_t* l, int data) {
-	cs_sl_node_t* head = l->head;
-	while (head && head->data != data) {
-		head = head->next;
+cs_slist_search(cs_slist_t* l, void* data) {
+	cs_sl_node_t* curr = l->head;
+	while (curr && curr->data != data) {
+		curr = curr->next;
 	}
-	return head;
+	return curr;
 }
 
 void
@@ -79,15 +80,5 @@ cs_slist_reverse(cs_slist_t* l) {
 		curr = next;
 	}
 	l->head = prev;
-}
-
-/* debug */
-void
-cs_slist_print(const cs_slist_t* l) {
-	cs_sl_node_t* node = l->head;
-	while (node) {
-		printf("%d\n", node->data);
-		node = node->next;
-	}
 }
 

@@ -1,3 +1,3 @@
 ulimit -c unlimited
-./ssl-server ./server.conf &
+nohup ./ssl-server ./server.conf &
 echo $! > my.pid

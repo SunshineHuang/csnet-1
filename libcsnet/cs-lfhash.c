@@ -45,6 +45,16 @@ cs_lfhash_insert(cs_lfhash_t* ht, int64_t key, void* data) {
 	return ret;
 }
 
+cs_lflist_t*
+cs_lfhash_getlist(cs_lfhash_t* ht, int64_t key) {
+	if (csnet_slow(ht->locked)) {
+		csnet_spinlock_lock(&ht->lock);
+	}
+	uint32_t hash = do_hash(ht->seed, (void*)&key, sizeof(int64_t));
+	int index = hash % ht->size;
+	return ht->table[index];
+}
+
 void*
 cs_lfhash_search(cs_lfhash_t* ht, int64_t key) {
 	void* data = NULL;

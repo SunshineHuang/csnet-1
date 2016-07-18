@@ -6,6 +6,6 @@
 
 typedef enum csnet_server_type {
 	ST_RESERVE = 1,
-	ST_EDGE_SERVER = 2,
+	ST_EDGE_SERVER = 3,
 } csnet_server_type_t;
 

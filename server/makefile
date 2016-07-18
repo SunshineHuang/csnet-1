@@ -1,4 +1,4 @@
-subdirs = midd-server edge-server 
+subdirs = midd-server edge-server ssl-server service-lookup
  
 target:
 	for dir in $(subdirs); do \

@@ -42,4 +42,5 @@
 #include "server_type.h"
 #include "csnet_ssock.h"
 #include "csnet_ss.h"
+#include "csnet-register.h"
 

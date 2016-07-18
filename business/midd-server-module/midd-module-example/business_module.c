@@ -3,6 +3,7 @@
 #include "business_cmd.h"
 #include "csnet_socket_api.h"
 
+#include "bmin-connect-server.h"
 #include "bmin_send_msg.h"
 
 #include <stdio.h>
@@ -32,6 +33,19 @@ void
 business_entry(csnet_ss_t* ss, csnet_head_t* head, char* data, int data_len) {
 	LOG_DEBUG(LOG, "new so business_entry: cmd: 0x%x, head len: %d, ctxid: %ld, data len: %d",
 		head->cmd, head->len, head->ctxid, data_len);
+
+	if (head->cmd == CSNET_NOTICE_REQ) {
+		struct bmin_connect_server* bm = bmin_connect_server_new(ss, head);
+		if (!bm) {
+			LOG_ERROR(LOG, "could not create bmin_connect_server_new");
+			csnet_module_ref_decrement(CONNTOR->module);
+			return;
+		}
+		bmin_connect_server_req(bm, ss, head, data, data_len);
+		bmin_connect_server_free(bm);
+		csnet_module_ref_decrement(CONNTOR->module);
+		return;
+	}
 
 	if (head->cmd == csnet_echo_msg_req) {
 		struct bmin_send_msg* bm = bmin_send_msg_new(ss, head);
