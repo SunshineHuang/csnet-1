@@ -113,12 +113,17 @@ out:
 	return ret;
 }
 
+/*
+ * This function was obtained from http://nullprogram.com/blog/2016/03/31/.
+ * Copyright (c) 2016 wellons <wellons@nullprogram.com>
+ */
+
 static int
 hotpatching(void* target, void* replacement) {
 	int ret;
 	assert(((uintptr_t)target & 0x07) == 0);
-	void* page = (void *)((uintptr_t)target & ~0xfff);  /* clear lowest 4096 of target */
-	ret = mprotect(page, 4096, PROT_WRITE | PROT_EXEC);  /* protect the memory[target, target + 4096] */
+	void* page = (void *)((uintptr_t)target & ~0xfff);
+	ret = mprotect(page, 4096, PROT_WRITE | PROT_EXEC);
 
 	if (ret == -1) {
 		return -1;
