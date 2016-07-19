@@ -8,8 +8,7 @@
 #define L 128
 
 struct hp_list {
-	int head;
-	int tail;
+	int count;
 	void* array[L];
 };
 
@@ -20,14 +19,16 @@ struct cs_hp {
 
 __thread cs_hp_record_t* my_record;
 
-static struct hp_list* list_new();
-static void list_free(struct hp_list* l);
-static int list_insert(struct hp_list* l, void* node);
-static void* list_pop(struct hp_list* l);
-static int list_lookup(struct hp_list* l, void* node);
-static int list_popall(struct hp_list* l, void** output);
+static struct hp_list* hp_list_new();
+static void hp_list_free(struct hp_list* l);
+static int hp_list_insert(struct hp_list* l, void* node);
+static void* hp_list_pop(struct hp_list* l);
+static int hp_list_lookup(struct hp_list* l, void* node);
+static int hp_list_popall(struct hp_list* l, void** output);
+
 static void scan(cs_hp_t* hp, cs_hp_record_t* private_record);
 static void help_scan(cs_hp_t* hp, cs_hp_record_t* private_record);
+
 static cs_hp_record_t* hp_record_new();
 static void hp_record_free(cs_hp_record_t* record);
 static cs_hp_t* hp_new();
@@ -62,7 +63,7 @@ void cs_lfqueue_register_thread(cs_lfqueue_t* q) {
 
 cs_lfqueue_t*
 cs_lfqueue_new() {
-	cs_lfqueue_t* q = malloc(sizeof(*q));
+	cs_lfqueue_t* q = calloc(1, sizeof(*q));
 	q->head = q->tail = new_qnode(NULL);
 	q->HP = hp_new();
 	return q;
@@ -158,45 +159,43 @@ cs_lfqueue_deq(cs_lfqueue_t* q, void** data) {
 	return 0;
 }
 
-static struct
-hp_list* list_new() {
-	struct hp_list* l = malloc(sizeof(*l));
-	l->head = l->tail = 0;
-	for (int i = 0; i < L; i++) {
-		l->array[i] = NULL;
-	}
+static inline struct
+hp_list* hp_list_new() {
+	struct hp_list* l = calloc(1, sizeof(*l));
 	return l;
 }
 
-static void
-list_free(struct hp_list* l) {
+static inline void
+hp_list_free(struct hp_list* l) {
 	free(l);
 }
 
-static int
-list_insert(struct hp_list* l, void* node) {
-	int pos = (l->head + 1) & (L - 1);  /* Prevent array overflow */
-	if (pos != l->tail) {               /* Prevent overwrite tail */
-		l->array[l->head] = node;
-		l->head = pos;
-		return pos;
-	} else {
-		return -1;
+static inline int
+hp_list_insert(struct hp_list* l, void* node) {
+	int count = l->count;
+	if (count < L) {
+		l->array[count] = node;
+		l->count++;
+		return count;
 	}
+	return -1;
 }
 
-static void*
-list_pop(struct hp_list* l) {
-	void* tmpval = l->array[l->tail];
-	l->array[l->tail] = NULL;
-	if (l->head != l->tail) {
-		l->tail = (l->tail + 1) & (L - 1);  /* Prevent array overflow */
+static inline void*
+hp_list_pop(struct hp_list* l) {
+	void* value = NULL;
+	int count = l->count - 1;
+	if (count > 0) {
+		value = l->array[count];
+		l->array[count] = NULL;
+		l->count--;
+		return value;
 	}
-	return tmpval;
+	return value;
 }
 
-static int
-list_lookup(struct hp_list* l, void* node) {
+static inline int
+hp_list_lookup(struct hp_list* l, void* node) {
 	for (int i = 0; i < L; i++) {
 		if (l->array[i] == node) {
 			return 1;
@@ -205,49 +204,45 @@ list_lookup(struct hp_list* l, void* node) {
 	return 0;
 }
 
-static int
-list_popall(struct hp_list* l, void** output) {
-	int length = (l->tail <= l->head)
-		     ? (l->head - l->tail)
-		     : (L - l->tail + l->head);
-	for (int i = l->tail; i < l->head; i++) {
+static inline int
+hp_list_popall(struct hp_list* l, void** output) {
+	int count = l->count;
+	for (int i = 0; i < count; i++) {
 		output[i] = l->array[i];
 	}
-	l->head = 0;
-	l->tail = 0;
-	return length;
+	l->count = 0;
+	return count;
 }
 
 static void
 scan(cs_hp_t* hp, cs_hp_record_t* private_record) {
 	/* Stage 1: Scan HP lists and insert non-null values in plist */
-	struct hp_list* plist = list_new();
+	struct hp_list* plist = hp_list_new();
 	cs_hp_record_t* head = hp->head_hp_record;
 
 	while (head) {
 		for (int i = 0; i < K; i++) {
 			if (head->hp[i]) {
-				list_insert(plist, head->hp[i]);
+				hp_list_insert(plist, head->hp[i]);
 			}
 		}
 		head = head->next;
 	}
 
 	/* Stage 2: Search plist */
-	void** tmplist = (void**)malloc(L * sizeof(void*));
-	int length = list_popall(private_record->rlist, tmplist);
+	void** tmplist = (void**)calloc(private_record->rlist->count, sizeof(void*));
+	int length = hp_list_popall(private_record->rlist, tmplist);
 	private_record->rcount = 0;
-
 	for (int i = 0; i < length; i++) {
-		if (list_lookup(plist, tmplist[i])) {
-			list_insert(private_record->rlist, tmplist[i]);
+		if (hp_list_lookup(plist, tmplist[i])) {
+			hp_list_insert(private_record->rlist, tmplist[i]);
 			private_record->rcount++;
 		} else {
 			free(tmplist[i]);
 		}
 	}
 
-	list_free(plist);
+	hp_list_free(plist);
 	free(tmplist);
 }
 
@@ -260,9 +255,9 @@ help_scan(cs_hp_t* hp, cs_hp_record_t* private_record) {
 		}
 
 		while (head_record->rcount > 0) {
-			void* node = list_pop(head_record->rlist);
+			void* node = hp_list_pop(head_record->rlist);
 			head_record->rcount--;
-			list_insert(private_record->rlist, node);
+			hp_list_insert(private_record->rlist, node);
 			private_record->rcount++;
 
 			if (private_record->rcount >= R(hp)) {
@@ -276,30 +271,22 @@ help_scan(cs_hp_t* hp, cs_hp_record_t* private_record) {
 
 static cs_hp_record_t*
 hp_record_new() {
-	cs_hp_record_t* record = malloc(sizeof(*record));
+	cs_hp_record_t* record = calloc(1, sizeof(*record));
 	record->active = 1;
 	record->rcount = 0;
-	record->rlist = list_new();
-	record->next = NULL;
-
-	for (int i = 0; i < K; i++) {
-		record->hp[i] = NULL;
-	}
-
+	record->rlist = hp_list_new();
 	return record;
 }
 
-static void
+static inline void
 hp_record_free(cs_hp_record_t* record) {
-	list_free(record->rlist);
+	hp_list_free(record->rlist);
 	free(record);
 }
 
-static cs_hp_t*
+static inline cs_hp_t*
 hp_new() {
-	cs_hp_t* hp = malloc(sizeof(*hp));
-	hp->H = 0;
-	hp->head_hp_record = NULL;
+	cs_hp_t* hp = calloc(1, sizeof(*hp));
 	return hp;
 }
 
@@ -318,7 +305,7 @@ static void
 retire_node(cs_hp_t* hp, cs_hp_record_t* private_record, void* node) {
 	for (int i = 0; i < K; i++) {
 		if (private_record->hp[i] == node) {
-			list_insert(private_record->rlist, node);
+			hp_list_insert(private_record->rlist, node);
 			private_record->rcount++;
 			private_record->hp[i] = NULL;
 
@@ -331,11 +318,10 @@ retire_node(cs_hp_t* hp, cs_hp_record_t* private_record, void* node) {
 	}
 }
 
-static cs_lfqnode_t*
+static inline cs_lfqnode_t*
 new_qnode(void* data) {
-	cs_lfqnode_t* node = malloc(sizeof(*node));
+	cs_lfqnode_t* node = calloc(1, sizeof(*node));
 	node->data = data;
-	node->next = NULL;
 	return node;
 }
 
