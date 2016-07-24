@@ -102,8 +102,9 @@ cs_lfhash_get_all_keys(cs_lfhash_t* ht) {
 	for (int i = 0; i < ht->size; i++) {
 		cs_lflist_t* tmp_list = ht->table[i];
 		cs_lflist_node_t* tmp_node = tmp_list->head->next;
-		for (; tmp_node != tmp_list->tail; tmp_node = tmp_node->next) {
+		while (tmp_node && tmp_node != tmp_list->tail) {
 			cs_lflist_insert(new_list, tmp_node->key, NULL);
+			tmp_node = tmp_node->next;
 		}
 	}
 	csnet_spinlock_unlock(&ht->lock);
