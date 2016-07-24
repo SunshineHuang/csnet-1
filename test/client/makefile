@@ -7,13 +7,13 @@ objs = one-by-one-conn-test.o  one-conn-test.o  stress-test.o
 all: $(target)
 
 one-by-one-conn-test: one-by-one-conn-test.o
-	gcc $(cflags) -o $@ $^ $(inc) $(lib) -lpthread -lcsnet
+	gcc $(cflags) -o $@ $^ $(inc) $(lib) -lpthread -lcsnet -lssl -lcrypto
 
 one-conn-test: one-conn-test.o
-	gcc $(cflags) -o $@ $^ $(inc) $(lib) -lpthread -lcsnet
+	gcc $(cflags) -o $@ $^ $(inc) $(lib) -lpthread -lcsnet -lssl -lcrypto
 
 stress-test: stress-test.o
-	gcc $(cflags) -o $@ $^ $(inc) $(lib) -lpthread -lcsnet
+	gcc $(cflags) -o $@ $^ $(inc) $(lib) -lpthread -lcsnet -lssl -lcrypto
 
 %.o: %.c
 	gcc $(cflags) -c $< $(inc)

@@ -21,8 +21,8 @@ int smp = 0;
 long* tpsum;
 long* qpssum;
 
-void prepare_data(int block_size)
-{
+static void
+prepare_data(int block_size) {
 	send_block = malloc(block_size + 1);
 	recv_block = malloc(HEAD_LEN + block_size + 1);
 
@@ -31,8 +31,8 @@ void prepare_data(int block_size)
 	send_block[block_size] = '\0';;
 }
 
-int _send(int fd)
-{
+static int
+_send(int fd) {
 	csnet_pack_t pack;
 	csnet_pack_init(&pack);
 	csnet_pack_putstr(&pack, send_block);
@@ -62,8 +62,8 @@ int _send(int fd)
 	return len;
 }
 
-int _recv(int fd, int block_size)
-{
+static int
+_recv(int fd, int block_size) {
 	int nrecv = 0;
 	int len = HEAD_LEN + block_size + 1;
 	int remain = len;
@@ -76,34 +76,47 @@ int _recv(int fd, int block_size)
 	return len;
 }
 
-void* worker(void* arg)
-{
+void*
+worker(void* arg) {
+	int tid = 0;
 	long nrecv = 0;
 	long nsend = 0;	
 	long qps = 0;
+	double tp = 0.0;
 	int fd = blocking_connect(ip, port);
-	if (fd == -1)
-		exit(1);
+
+	if (fd == -1) {
+		tid = __sync_sub_and_fetch(&smp, 1);
+		tpsum[tid] = tp;
+		qpssum[tid] = qps;
+		return NULL;
+	}
+
 	while (!atomic_load(&running));
+	unsigned long start = csnet_gettime();
 	while (atomic_load(&running)) {
 		nsend += _send(fd);
 		nrecv += _recv(fd, block_size);
 		qps++;
 	}
-
-	double tp = nrecv + nsend;
-	int tmp = __sync_sub_and_fetch(&smp, 1);
-	tpsum[tmp] = tp;
-	qpssum[tmp] = qps;
+	unsigned long end = csnet_gettime();
+	unsigned long used = end - start;
+	tp = nrecv + nsend;
+	tid = __sync_sub_and_fetch(&smp, 1);
+	tpsum[tid] = tp;
+	qpssum[tid] = qps;
 	/*
 	printf("send %ld bytes in %d seconds\n", nsend, duration);
 	printf("recv %ld bytes in %d seconds\n", nrecv, duration);
 	if (tp >= 1024 * 1024)
-		printf("thread[%d] through put: %.2fMB/s\n", tmp, tp/1024/1024/duration);
+		printf("thread[%d] through put: %.2fMB/s\n", tid, tp/1024/1024/duration);
 	else
-		printf("thread[%d] through put: %.2fKB/s\n", tmp, tp/1024/duration);
-	printf("thread[%d] %ld qps\n", tmp, qps);
+		printf("thread[%d] through put: %.2fKB/s\n", tid, tp/1024/duration);
+	printf("thread[%d] %ld qps\n", tid, qps);
 	*/
+	printf("thread[%d] exits. taken %ldus = %.02fms = %.02fs\n",
+		tid, used, (double)used / 1000, (double)used / 1000 / 1000);
+	close(fd);
 
 	return NULL;
 }
@@ -111,7 +124,7 @@ void* worker(void* arg)
 int main(int argc, char** argv)
 {
 	if (argc != 6) {
-		fprintf(stderr, "./pingpong <ip> <port> <npthread> <timeout> <block_size>\n");
+		fprintf(stderr, "%s <ip> <port> <npthread> <timeout> <block_size>\n", argv[0]);
 		return -1;
 	}
 
@@ -139,6 +152,7 @@ int main(int argc, char** argv)
 		smp++;
 	}
 
+	sleep(5);
 	atomic_store(&running, 1);
 	sleep(duration);
 	atomic_store(&running, 0);
@@ -147,20 +161,27 @@ int main(int argc, char** argv)
 		sleep(1);
 	}
 
-	double totaltp = 0;
+	double totaltp = 0.0;
+	double tp = 0.0;
 	long totalqps = 0;
+	long qps = 0;
 	for (int i = 0; i < nthread; i++) {
 		totaltp += tpsum[i];
 		totalqps += qpssum[i];
 	}
-	printf("=======\n");
-	printf("through put: %.2fMB/s\n", totaltp/1024/1024/duration);
-	printf("qps: %ld\n", totalqps/duration);
-	printf("=======\n");
+	tp = totaltp/1024/1024/duration;
+	qps = totalqps / duration;
+	printf("********************************\n");
+	printf("through put: %.2fMB/s\n", tp);
+	printf("qps: %ld\n", qps);
+	printf("%.02fms/request\n", (double)duration * 1000 / qps);
+	printf("********************************\n");
+
 	free(tpsum);
 	free(qpssum);
 	free(send_block);
 	free(recv_block);
+
 	return 0;
 }
 
