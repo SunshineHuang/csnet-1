@@ -165,6 +165,7 @@ csnet_conntor_connect(csnet_conntor_t* conntor, int stype, const char* sip, int 
 		csnet_epoller_add(conntor->epoller, fd, server_node->sid);
 		cs_lfhash_insert(conntor->hashtbl, server_node->sid, server_node);
 		csnet_timer_insert(conntor->timer, fd, server_node->sid);
+		slot->curr_node = slot->dlist->head;
 		LOG_INFO(conntor->log, "connected to [%s:%d] with socket: %d, sid: %d",
 			server_node->ip, server_node->port, fd, server_node->sid);
 		csnet_spinlock_unlock(&slot->lock);
