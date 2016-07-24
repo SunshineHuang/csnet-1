@@ -1,4 +1,4 @@
-subdirs = libcsnet business server
+subdirs = libcsnet business server test
  
 target:
 	for dir in $(subdirs); do \
