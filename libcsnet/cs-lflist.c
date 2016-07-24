@@ -1,5 +1,5 @@
 #include "cs-lflist.h"
-#include "csnet_atomic.h"
+#include "csnet-atomic.h"
 
 #include <stdio.h>
 #include <stdlib.h>

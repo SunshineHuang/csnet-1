@@ -1,11 +1,11 @@
 #pragma once
 
 #include "cs-lfqueue.h"
-#include "csnet_el.h"
-#include "csnet_log.h"
-#include "csnet_msg.h"
-#include "csnet_module.h"
-#include "csnet_epoller.h"
+#include "csnet-el.h"
+#include "csnet-log.h"
+#include "csnet-msg.h"
+#include "csnet-module.h"
+#include "csnet-epoller.h"
 
 typedef struct csnet {
 	int type;

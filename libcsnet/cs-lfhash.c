@@ -1,6 +1,6 @@
 #include "cs-lfhash.h"
-#include "csnet_fast.h"
-#include "csnet_atomic.h"
+#include "csnet-fast.h"
+#include "csnet-atomic.h"
 
 #include <stdlib.h>
 

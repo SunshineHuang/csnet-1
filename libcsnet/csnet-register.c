@@ -1,12 +1,12 @@
 #include "csnet-register.h"
-#include "csnet_cmd.h"
-#include "csnet_head.h"
-#include "csnet_pack.h"
-#include "csnet_unpack.h"
-#include "csnet_utils.h"
-#include "csnet_sock.h"
-#include "csnet_sb.h"
-#include "csnet_socket_api.h"
+#include "csnet-cmd.h"
+#include "csnet-head.h"
+#include "csnet-pack.h"
+#include "csnet-unpack.h"
+#include "csnet-utils.h"
+#include "csnet-sock.h"
+#include "csnet-sb.h"
+#include "csnet-socket-api.h"
 
 #include <stdlib.h>
 #include <string.h>

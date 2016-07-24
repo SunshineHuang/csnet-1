@@ -1,7 +1,6 @@
 #pragma once
 
 #include "libcsnet.h"
-#include "business_ops.h"
 
 struct bmin_connect_server {
 	business_ops_t ops;

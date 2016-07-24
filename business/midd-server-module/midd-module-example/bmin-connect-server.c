@@ -1,6 +1,7 @@
 #include "bmin-connect-server.h"
-#include "business_cmd.h"
-#include "head_status.h"
+#include "business-cmd.h"
+#include "head-status.h"
+
 #include "libcsnet.h"
 
 #include <stdlib.h>

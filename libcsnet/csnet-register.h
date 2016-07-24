@@ -1,7 +1,7 @@
 #pragma once
 
-#include "csnet_log.h"
-#include "csnet_config.h"
+#include "csnet-log.h"
+#include "csnet-config.h"
 
 typedef struct csnet_register {
 	int mytype;

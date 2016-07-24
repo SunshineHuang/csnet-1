@@ -1,4 +1,4 @@
-subdirs = bounded-queue hashtable list midd-server mutex-queue pack plog recv-buffer timer
+subdirs = client  pack  recv-buffer  service-lookup  ssl-client
 
 target:
 	for dir in $(subdirs); do \

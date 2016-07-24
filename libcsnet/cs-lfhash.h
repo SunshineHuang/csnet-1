@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cs-lflist.h"
-#include "csnet_spinlock.h"
+#include "csnet-spinlock.h"
 
 #include <stdint.h>
 

@@ -1,8 +1,8 @@
 #include "csnet.h"
-#include "csnet_cond.h"
-#include "csnet_fast.h"
-#include "csnet_utils.h"
-#include "csnet_socket_api.h"
+#include "csnet-cond.h"
+#include "csnet-fast.h"
+#include "csnet-utils.h"
+#include "csnet-socket-api.h"
 
 #include <stdio.h>
 #include <stdlib.h>
