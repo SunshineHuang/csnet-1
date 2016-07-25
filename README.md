@@ -105,6 +105,44 @@ All the benchmark tests are test on virtual machine on my Macbook Pro.
 | 600     | 27+  MB/s   | 110000+ |
 | 800     | 24+  MB/s   |  97000+ |
 
+
+# HowTo Setup
+## Build csnet
+```
+$ cd csnet
+$ make -j4
+```
+## Setup service lookup server
+First, in order to make edge-servers and middle-servers to find each other, we must setup a service lookup server.  
+```
+$ mkdir -p ~/csnet-bin/lookup-server && cd ~/csnet-bin/lookup-server
+$ cp csnet/server/service-lookup/lookup-server csnet/server/service-lookup/*.sh csnet/server/service-lookup/*.conf csnet/business/edge-server-module/service-lookup/*.so ./
+```
+Modify the `myip`, `myport` and `mytype` in server.conf to yours.
+
+## Setup edge server
+```
+$ mkdir -p ~/csnet-bin/edge-server && cd ~/csnet-bin/edge-server
+$ cp csnet/server/edge-server/edge-server csnet/server/edge-server/*.sh csnet/server/edge-server/*.conf csnet/business/edge-server-module/edge-module-example/*.so ./
+```
+Modify the `myip`, `myport` and `mytype` in server.conf to yours, and modify `sip` and `sport` to the service lookup server's. And modify `accept-server-type` to the middle-server type if there's other middle-server want to connect to this edge-server.  
+**Note**: `mytype` must be the value in file csnet/libcsnet/csnet-service-type.h .
+
+## Setup midd server
+```
+$ mkdir -p ~/csnet-bin/midd-server && cd ~/csnet-bin/midd-server
+$ cp csnet/server/midd-server/midd-server csnet/server/midd-server/*.sh csnet/server/midd-server/*.conf csnet/business/midd-server-module/midd-module-example/*.so ./
+```
+Modify the `myip`, `myport` and `mytype` in server.conf to yours, and modify `sip` and `sport` to the service lookup server's. And modify `connect-server-type` to the edge-server type if there's this midd-server needs to connect edge-server. 
+
+## Setup ssl server
+```
+$ mkdir -p ~/csnet-bin/ssl-server && cd ~/csnet-bin/ssl-server
+$ cp csnet/server/ssl-server/ssl-server csnet/server/ssl-server/*.sh csnet/server/ssl-server/*.conf csnet/business/midd-server-module/midd-module-example/*.so ./
+```
+Modify the `myip`, `myport` and `mytype` in server.conf to yours, and modify `sip` and `sport` to the service lookup server's. And modify `connect-server-type` to the edge-server type if there's this midd-server needs to connect edge-server. 
+
+
 # License
 
 [MIT](http://opensource.org/licenses/MIT)
