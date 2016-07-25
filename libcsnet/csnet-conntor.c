@@ -335,7 +335,6 @@ readable_event(csnet_conntor_t* conntor, csnet_ss_t* ss, unsigned int sid, int f
 			}
 
 			if (csnet_fast(head->cmd != CSNET_HEARTBEAT_ACK)) {
-				csnet_module_ref_increment(conntor->module);
 				csnet_module_entry(conntor->module, ss, head, data + HEAD_LEN, head->len - HEAD_LEN);
 			} else {
 				/* Do nothing when recv CSNET_HEARTBEAT_ACK */

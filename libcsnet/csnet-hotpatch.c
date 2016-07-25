@@ -91,7 +91,7 @@ int csnet_hotpatch_do_patching(csnet_hotpatch_t* hp) {
 			if (hp->conntor) {
 				csnet_conntor_reset_module(hp->conntor, hp->module);
 			}
-			while (hp->conntor || old_module->ref_count != 0) {
+			while (hp->conntor && old_module->ref_count != 0) {
 				wait_milliseconds(10);
 			}
 			csnet_module_free(old_module);
